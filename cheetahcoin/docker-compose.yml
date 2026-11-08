@@ -22,7 +22,6 @@ services:
     container_name: chta_pool
     restart: on-failure
     ports:
-      - "8080:8080"  # Web Dashboard interface
       - "3032:3032"  # Stratum Mining Port for Bitaxe / ASICs
     depends_on:
       - chta_node
