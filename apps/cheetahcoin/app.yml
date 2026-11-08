@@ -1,0 +1,10 @@
+id: cheetahcoin
+name: "Cheetahcoin Solo Miner"
+version: "1.0.0"
+description: "Run a full Cheetahcoin node and mining proxy setup on your 5tratum device. Optimized for Bitaxe and SHA-256 miners."
+developer: "5stratNodeApps"
+website: "https://github.com"
+submitter: "5stratNodeApps"
+icon: "https://githubusercontent.com"
+gallery: []
+port: 8080
