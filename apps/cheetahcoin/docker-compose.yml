@@ -46,32 +46,8 @@ services:
       - APPMANAGER_PATH=/apps/cheetahcoin
     volumes:
       - chta_data:/root/.cheetahcoin
-    entrypoint: /bin/sh -c
-    command:
-      - |
-        mkdir -p /app && cd /app
-        echo 'const http = require("http"); fs = require("fs");
-        http.createServer((req, res) => {
-          let syncProgress = "Analyzing ledger... Please wait.";
-          try {
-            const logData = fs.readFileSync("/root/.cheetahcoin/debug.log", "utf8");
-            const matches = logData.match(/UpdateTip: new best=/g);
-            syncProgress = matches ? `Synchronizing blocks (Active connections found)...` : "Initializing core network peers...";
-          } catch(e) { syncProgress = "Starting Cheetahcoin Daemon background architecture..."; }
-
-          res.writeHead(200, {"Content-Type": "text/html"});
-          res.end(`<html><body style="background:#111;color:#fff;font-family:sans-serif;padding:10%;text-align:center;">
-            <h2>🐆 Cheetahcoin Node Administration Console</h2>
-            <div style="background:#222;padding:20px;border-radius:8px;margin:20px 0;border:1px solid #ff9900;">
-              <strong>Status:</strong> ${syncProgress}
-            </div>
-            <p>Your Bitaxe miners can connect to port <strong>3032</strong> immediately. The node will process shares in the queue while the blockchain ledger catches up.</p>
-            <hr style="border-color:#333;margin:30px 0;">
-            <h3>🛠️ Configuration Profiles</h3>
-            <p>Settings parameters can be managed seamlessly directly through your native 5tratum App Settings sidebar panel.</p>
-          </body></html>`);
-        }).listen(8080);' > server.js
-        node server.js
+    entrypoint: ["/bin/sh", "-c"]
+    command: ["mkdir -p /app && cd /app && echo 'const http = require(\"http\"); fs = require(\"fs\"); http.createServer((req, res) => { let syncProgress = \"Analyzing ledger... Please wait.\"; try { const logData = fs.readFileSync(\"/root/.cheetahcoin/debug.log\", \"utf8\"); syncProgress = logData.includes(\"UpdateTip: new best=\") ? \"Synchronizing blocks (Active connections found)...\" : \"Initializing core network peers...\"; } catch(e) { syncProgress = \"Starting Cheetahcoin Daemon background architecture...\"; } res.writeHead(200, {\"Content-Type\": \"text/html\"}); res.end(\"<html><body style=\\\"background:#111;color:#fff;font-family:sans-serif;padding:10%;text-align:center;\\\"><h2>🐆 Cheetahcoin Node Administration Console</h2><div style=\\\"background:#222;padding:20px;border-radius:8px;margin:20px 0;border:1px solid #ff9900;\\\"><strong>Status:</strong> \" + syncProgress + \"</div><p>Your Bitaxe miners can connect to port <strong>3032</strong> immediately. The node will process shares in the queue while the blockchain ledger catches up.</p><hr style=\\\"border-color:#333;margin:30px 0;\\\"><h3>\uD83D\uDEE0️ Configuration Profiles</h3><p>Settings parameters can be managed seamlessly directly through your native 5tratum App Settings sidebar panel.</p></body></html>\"); }).listen(8080);' > server.js && node server.js"]
 
 volumes:
   chta_data:
