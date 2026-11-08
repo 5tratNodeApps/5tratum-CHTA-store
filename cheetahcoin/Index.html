@@ -15,7 +15,6 @@
     <h2>Cheetahcoin Solo Miner is Initializing...</h2>
     <p>The backend node is currently syncing with the blockchain network. This window will refresh automatically.</p>
     <script>
-        // Simple script to check if the true mining pool port is alive yet
         setInterval(function() {
             fetch('/pool-check').then(res => {
                 if(res.status === 200) { window.location.reload(); }
