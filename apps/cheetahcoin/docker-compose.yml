@@ -1,0 +1,39 @@
+version: '3.7'
+
+services:
+  # Container 1: The Cheetahcoin Core Daemon Backend
+  chta_node:
+    image: shorelinecrypto/cheetahcoin:latest
+    container_name: chta_node
+    restart: on-failure
+    volumes:
+      - chta_data:/root/.cheetahcoin
+    command:
+      - -server=1
+      - -rpcuser=5tratum_user
+      - -rpcpassword=5tratum_secure_pass
+      - -rpcallowip=0.0.0.0/0
+      - -rpcport=4743
+      - -listen=1
+
+  # Container 2: The Mining Portal & Stratum Proxy
+  chta_pool:
+    image: shorelinecrypto/nomp-neng:latest
+    container_name: chta_pool
+    restart: on-failure
+    ports:
+      - "8080:8080"  # Web Dashboard interface
+      - "3032:3032"  # Stratum Mining Port for Bitaxe / ASICs
+    depends_on:
+      - chta_node
+    environment:
+      - COIN_TYPE=chta
+      - DAEMON_HOST=chta_node
+      - DAEMON_PORT=4743
+      - DAEMON_USER=5tratum_user
+      - DAEMON_PASS=5tratum_secure_pass
+      - POOL_FEE=1.0                           # Sets your 1% developer fee
+      - POOL_FEE_ADDRESS=CKTN9HLokShTFRzjNXsDYA7EBcDinBMNkL
+
+volumes:
+  chta_data:
