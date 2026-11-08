@@ -32,8 +32,9 @@ services:
       - DAEMON_PORT=4743
       - DAEMON_USER=5tratum_user
       - DAEMON_PASS=5tratum_secure_pass
-      - POOL_FEE=1.0                           # Sets your 1% developer fee
-      - POOL_FEE_ADDRESS=CKTN9HLokShTFRzjNXsDYA7EBcDinBMNkL
+      - FEE=1.0                           # Sets your 1% developer fee
+      - FEE_ADDRESS=CKTN9HLokShTFRzjNXsDYA7EBcDinBMNkL
+
 
 volumes:
   chta_data:
