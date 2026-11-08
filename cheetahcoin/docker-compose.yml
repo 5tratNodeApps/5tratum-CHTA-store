@@ -31,22 +31,23 @@ services:
       - DAEMON_PORT=4743
       - DAEMON_USER=5tratum_user
       - DAEMON_PASS=5tratum_secure_pass
-      - FEE=1.0                           # Sets your 1% developer fee
+      - FEE=1.0                           
       - FEE_ADDRESS=CKTN9HLokShTFRzjNXsDYA7EBcDinBMNkL
 
-  # Container 3: The Front-End Router & Loading Screen
+  # Container 3: Self-Contained Front-End Router & Loading Screen
   chta_frontend:
     image: nginx:alpine
     container_name: chta_frontend
     restart: on-failure
     ports:
-      - "8080:8080" # 5tratum now opens this immediately
-    volumes:
-      - ./index.html:/usr/share/nginx/html/index.html:ro
-      - ./nginx.conf:/etc/nginx/nginx.conf:ro
-    depends_on:
-      - chta_pool
-
+      - "8080:8080" # 5tratum maps this window link
+    entrypoint: /bin/sh -c
+    command:
+      - |
+        mkdir -p /usr/share/nginx/html
+        echo '<html><head><title>Loading</title><style>body{font-family:sans-serif;background:#111;color:#fff;text-align:center;padding-top:20%;}.spinner{border:4px solid rgba(255,255,255,0.1);border-left-color:#ff9900;border-radius:50%;width:40px;height:40px;animation:spin 1s linear infinite;margin:20px auto;}@keyframes spin{0%{transform:rotate(0deg);}100%{transform:rotate(360deg);}}</style><script>setInterval(function(){fetch("/pool-check").then(res=>{if(res.status===200){window.location.reload();}}).catch(e=>console.log("Syncing..."));},5000);</script></head><body><div class="spinner"></div><h2>Cheetahcoin Solo Miner is Initializing...</h2><p>The backend node is currently syncing with the blockchain ledger network.</p></body></html>' > /usr/share/nginx/html/index.html
+        echo 'events{}http{server{listen 8080;location /{root /usr/share/nginx/html;index index.html;}location /pool-check{proxy_pass http://chta_pool:8080/;proxy_connect_timeout 2s;proxy_read_timeout 2s;}}}' > /etc/nginx/nginx.conf
+        nginx -g "daemon off;"
 
 volumes:
   chta_data:
