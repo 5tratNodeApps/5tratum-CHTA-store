@@ -22,7 +22,6 @@ services:
     container_name: chta_pool
     restart: on-failure
     ports:
-      - "8080:8080"  # Exposes the main Web Dashboard directly
       - "3032:3032"  # Stratum Mining Port for Bitaxe / ASICs
     depends_on:
       - chta_node
@@ -40,19 +39,19 @@ services:
     image: node:18-alpine
     container_name: chta_admin_interface
     restart: on-failure
+    ports:
+      - "8080:8080" # Maps the window dashboard button natively
     environment:
       - NODE_ENV=production
       - APPMANAGER_PATH=/apps/cheetahcoin
     volumes:
       - chta_data:/root/.cheetahcoin
-    # Inline initialization script that boots instantly to serve user status and control panels
     entrypoint: /bin/sh -c
     command:
       - |
         mkdir -p /app && cd /app
         echo 'const http = require("http"); fs = require("fs");
         http.createServer((req, res) => {
-          // Read current sync status from local blockchain data logs
           let syncProgress = "Analyzing ledger... Please wait.";
           try {
             const logData = fs.readFileSync("/root/.cheetahcoin/debug.log", "utf8");
