@@ -1,2 +1,3 @@
 id: chta-store
-name: Cheetahcoin Store
+name: "Cheetahcoin Store"
+description: "Custom repository for running a CHTA coin solo mining node."
