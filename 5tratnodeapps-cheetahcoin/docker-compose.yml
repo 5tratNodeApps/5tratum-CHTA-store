@@ -29,16 +29,16 @@ services:
       - redis
     entrypoint: ["/bin/sh", "-c"]
     command: ["DIR=$(dirname $(find / -name config_example.json 2>/dev/null | head -n 1)); cd $DIR && mkdir -p config/pool_configs && cp config_example.json config/config.json && sed -i 's/127.0.0.1/redis/g' config/config.json && echo '{\"enabled\":true,\"coin\":\"cheetahcoin.json\",\"address\":\"CKTN9HLokShTFRzjNXsDYA7EBcDinBMNkL\",\"rewardRecipients\":{\"CKTN9HLokShTFRzjNXsDYA7EBcDinBMNkL\":1.0},\"paymentProcessing\":{\"enabled\":true,\"paymentInterval\":600,\"minimumPayment\":5,\"daemon\":{\"host\":\"chta_node\",\"port\":4743,\"user\":\"5tratum_user\",\"password\":\"5tratum_secure_pass\"}},\"ports\":{\"3032\":{\"diff\":0.001,\"varDiff\":{\"minDiff\":0.0005,\"maxDiff\":100,\"targetTime\":15,\"retargetTime\":60,\"variancePercent\":30}}},\"daemons\":[{\"host\":\"chta_node\",\"port\":4743,\"user\":\"5tratum_user\",\"password\":\"5tratum_secure_pass\"}]}' > config/pool_configs/cheetahcoin.json && while true; do node init.js; echo 'Waiting for chta_node to finish syncing...'; sleep 15; done"]
-
-  # Container 4: Clean Nginx Web Console (Uses curl instead of wget)
+ 
+  # Container 4: Native Window Web Server (Fetches index.html via built-in Node HTTPS)
   chta_admin_interface:
-    image: nginx:alpine
+    image: node:18-alpine
     container_name: chta_admin_interface
     restart: unless-stopped
     ports:
-      - "8080:80"
+      - "8080:8080"
     entrypoint: ["/bin/sh", "-c"]
-    command: ["HOST=raw.githubusercontent.com && PATH=/5tratNodeApps/5tratum-CHTA-store/main/5tratnodeapps-cheetahcoin/index.html && curl -sSL https://$HOST$PATH -o /usr/share/nginx/html/index.html; nginx -g 'daemon off;'"]
+    command: ["node -e 'const http=require(\"http\"),https=require(\"https\");http.createServer((req,res)=>{https.get({hostname:\"raw.githubusercontent.com\",path:\"/5tratNodeApps/5tratum-CHTA-store/main/5tratnodeapps-cheetahcoin/index.html\"},r=>{res.writeHead(200,{\"Content-Type\":\"text/html\"});r.pipe(res);}).on(\"error\",()=>{res.writeHead(200,{\"Content-Type\":\"text/html\"});res.end(\"<body style=background:#111;color:#fff;font-family:sans-serif;text-align:center;padding:10%><h2>Cheetahcoin Node Active</h2><p>Stratum Port: 3032</p></body>\");});}).listen(8080);'"]
 
 volumes:
   chta_data:
