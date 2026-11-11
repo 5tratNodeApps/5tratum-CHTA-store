@@ -43,7 +43,7 @@ services:
       - "8080:8080" # Maps the window dashboard button natively
     environment:
       - NODE_ENV=production
-      - APPMANAGER_PATH=/apps/5tratnodeapps-cheetahcoin
+      - APPMANAGER_PATH=/5tratnodeapps-cheetahcoin
     volumes:
       - chta_data:/root/.cheetahcoin
     entrypoint: ["/bin/sh", "-c"]
