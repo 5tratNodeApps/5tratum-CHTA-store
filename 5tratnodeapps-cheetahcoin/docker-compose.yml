@@ -1,13 +1,11 @@
 version: '3.7'
 
 services:
-  # Container 1: Redis Database
   redis:
     image: redis:alpine
     container_name: chta_redis
     restart: unless-stopped
 
-  # Container 2: Cheetahcoin v2.5.0 Core Daemon
   chta_node:
     image: ubuntu:22.04
     container_name: chta_node
@@ -15,9 +13,19 @@ services:
     volumes:
       - chta_data:/root/.cheetahcoin
     entrypoint: ["/bin/bash", "-c"]
-    command: ["apt-get update && apt-get install -y wget tar ca-certificates && mkdir -p /opt/chta /root/.cheetahcoin && if [ ! -f /opt/chta/cheetahcoind ]; then H=github.com && P=/ShorelineCrypto/cheetahcoin/releases/download/v2.5.0/cheetahcoin-2.5.0-x86_64-linux-gnu.tar.gz && wget -O /tmp/chta.tgz https://$H$P && tar -xzf /tmp/chta.tgz -C /opt/chta --strip-components=1 && rm /tmp/chta.tgz; fi && /opt/chta/cheetahcoind -datadir=/root/.cheetahcoin -server=1 -rpcuser=5tratum_user -rpcpassword=5tratum_secure_pass -rpcallowip=0.0.0.0/0 -rpcport=4743 -listen=1 -printtoconsole"]
+    command:
+      - |
+        apt-get update && apt-get install -y wget tar ca-certificates
+        mkdir -p /opt/chta /root/.cheetahcoin
+        if [ ! -f /opt/chta/cheetahcoind ]; then
+          H=github.com
+          P=/ShorelineCrypto/cheetahcoin/releases/download/v2.5.0/cheetahcoin-2.5.0-x86_64-linux-gnu.tar.gz
+          wget -O /tmp/chta.tgz https://$H$P
+          tar -xzf /tmp/chta.tgz -C /opt/chta --strip-components=1
+          rm /tmp/chta.tgz
+        fi
+        /opt/chta/cheetahcoind -datadir=/root/.cheetahcoin -server=1 -rpcuser=5tratum_user -rpcpassword=5tratum_secure_pass -rpcallowip=0.0.0.0/0 -rpcport=4743 -listen=1 -printtoconsole
 
-  # Container 3: NOMP Mining Portal & Stratum Proxy (Auto-Path + Wait Loop)
   chta_pool:
     image: shorelinecrypto/nomp-neng:latest
     container_name: chta_pool
@@ -28,9 +36,60 @@ services:
       - chta_node
       - redis
     entrypoint: ["/bin/sh", "-c"]
-    command: ["DIR=$(dirname $(find / -name config_example.json 2>/dev/null | head -n 1)); cd $DIR && mkdir -p config/pool_configs && cp config_example.json config/config.json && sed -i 's/127.0.0.1/redis/g' config/config.json && echo '{\"enabled\":true,\"coin\":\"cheetahcoin.json\",\"address\":\"CKTN9HLokShTFRzjNXsDYA7EBcDinBMNkL\",\"rewardRecipients\":{\"CKTN9HLokShTFRzjNXsDYA7EBcDinBMNkL\":1.0},\"paymentProcessing\":{\"enabled\":true,\"paymentInterval\":600,\"minimumPayment\":5,\"daemon\":{\"host\":\"chta_node\",\"port\":4743,\"user\":\"5tratum_user\",\"password\":\"5tratum_secure_pass\"}},\"ports\":{\"3032\":{\"diff\":0.001,\"varDiff\":{\"minDiff\":0.0005,\"maxDiff\":100,\"targetTime\":15,\"retargetTime\":60,\"variancePercent\":30}}},\"daemons\":[{\"host\":\"chta_node\",\"port\":4743,\"user\":\"5tratum_user\",\"password\":\"5tratum_secure_pass\"}]}' > config/pool_configs/cheetahcoin.json && while true; do node init.js; echo 'Waiting for chta_node to finish syncing...'; sleep 15; done"]
- 
-  # Container 4: Native Window Web Server (Fetches index.html via built-in Node HTTPS)
+    command:
+      - |
+        DIR=$(dirname $(find / -name config_example.json 2>/dev/null | head -n 1))
+        cd $DIR
+        mkdir -p config/pool_configs
+        cp config_example.json config/config.json
+        sed -i 's/127.0.0.1/redis/g' config/config.json
+        cat << 'EOF' > config/pool_configs/cheetahcoin.json
+        {
+          "enabled": true,
+          "coin": "cheetahcoin.json",
+          "address": "CKTN9HLokShTFRzjNXsDYA7EBcDinBMNkL",
+          "rewardRecipients": {
+            "CKTN9HLokShTFRzjNXsDYA7EBcDinBMNkL": 1.0
+          },
+          "paymentProcessing": {
+            "enabled": true,
+            "paymentInterval": 600,
+            "minimumPayment": 5,
+            "daemon": {
+              "host": "chta_node",
+              "port": 4743,
+              "user": "5tratum_user",
+              "password": "5tratum_secure_pass"
+            }
+          },
+          "ports": {
+            "3032": {
+              "diff": 0.001,
+              "varDiff": {
+                "minDiff": 0.0005,
+                "maxDiff": 100,
+                "targetTime": 15,
+                "retargetTime": 60,
+                "variancePercent": 30
+              }
+            }
+          },
+          "daemons": [
+            {
+              "host": "chta_node",
+              "port": 4743,
+              "user": "5tratum_user",
+              "password": "5tratum_secure_pass"
+            }
+          ]
+        }
+        EOF
+        while true; do
+          node init.js
+          echo "Waiting for chta_node to finish syncing..."
+          sleep 15
+        done
+
   chta_admin_interface:
     image: node:18-alpine
     container_name: chta_admin_interface
@@ -38,7 +97,25 @@ services:
     ports:
       - "8080:8080"
     entrypoint: ["/bin/sh", "-c"]
-    command: ["node -e 'const http=require(\"http\"),https=require(\"https\");http.createServer((req,res)=>{https.get({hostname:\"raw.githubusercontent.com\",path:\"/5tratNodeApps/5tratum-CHTA-store/main/5tratnodeapps-cheetahcoin/index.html\"},r=>{res.writeHead(200,{\"Content-Type\":\"text/html\"});r.pipe(res);}).on(\"error\",()=>{res.writeHead(200,{\"Content-Type\":\"text/html\"});res.end(\"<body style=background:#111;color:#fff;font-family:sans-serif;text-align:center;padding:10%><h2>Cheetahcoin Node Active</h2><p>Stratum Port: 3032</p></body>\");});}).listen(8080);'"]
+    command:
+      - |
+        cat << 'EOF' > /server.js
+        const http = require("http");
+        const https = require("https");
+        http.createServer((req, res) => {
+          https.get({
+            hostname: "raw.githubusercontent.com",
+            path: "/5tratNodeApps/5tratum-CHTA-store/main/5tratnodeapps-cheetahcoin/index.html"
+          }, r => {
+            res.writeHead(200, { "Content-Type": "text/html" });
+            r.pipe(res);
+          }).on("error", () => {
+            res.writeHead(200, { "Content-Type": "text/html" });
+            res.end("<body style='background:#111;color:#fff;font-family:sans-serif;text-align:center;padding:10%'><h2>Cheetahcoin Node Active</h2><p>Stratum Port: 3032</p></body>");
+          });
+        }).listen(8080);
+        EOF
+        node /server.js
 
 volumes:
   chta_data:
