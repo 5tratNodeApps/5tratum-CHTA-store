@@ -17,7 +17,7 @@ services:
     entrypoint: ["/bin/bash", "-c"]
     command: ["apt-get update && apt-get install -y wget tar ca-certificates && mkdir -p /opt/chta /root/.cheetahcoin && if [ ! -f /opt/chta/cheetahcoind ]; then wget -O /tmp/chta.tgz https://github.com && tar -xzf /tmp/chta.tgz -C /opt/chta --strip-components=1 && rm /tmp/chta.tgz; fi && /opt/chta/cheetahcoind -datadir=/root/.cheetahcoin -server=1 -rpcuser=5tratum_user -rpcpassword=5tratum_secure_pass -rpcallowip=0.0.0.0/0 -rpcport=4743 -listen=1 -printtoconsole"]
 
-  # Container 3: NOMP Mining Portal & Stratum Proxy (5 CHTA min / 10-min interval)
+  # Container 3: NOMP Mining Portal & Stratum Proxy (5 CHTA min / 10-min payout)
   chta_pool:
     image: shorelinecrypto/nomp-neng:latest
     container_name: chta_pool
@@ -30,7 +30,7 @@ services:
     entrypoint: ["/bin/sh", "-c"]
     command: ["mkdir -p /root/NOMP-neng/config/pool_configs && cp /root/NOMP-neng/config_example.json /root/NOMP-neng/config/config.json && sed -i 's/127.0.0.1/redis/g' /root/NOMP-neng/config/config.json && echo '{\"enabled\":true,\"coin\":\"cheetahcoin.json\",\"address\":\"CKTN9HLokShTFRzjNXsDYA7EBcDinBMNkL\",\"rewardRecipients\":{\"CKTN9HLokShTFRzjNXsDYA7EBcDinBMNkL\":1.0},\"paymentProcessing\":{\"enabled\":true,\"paymentInterval\":600,\"minimumPayment\":5,\"daemon\":{\"host\":\"chta_node\",\"port\":4743,\"user\":\"5tratum_user\",\"password\":\"5tratum_secure_pass\"}},\"ports\":{\"3032\":{\"diff\":0.001,\"varDiff\":{\"minDiff\":0.0005,\"maxDiff\":100,\"targetTime\":15,\"retargetTime\":60,\"variancePercent\":30}}},\"daemons\":[{\"host\":\"chta_node\",\"port\":4743,\"user\":\"5tratum_user\",\"password\":\"5tratum_secure_pass\"}]}' > /root/NOMP-neng/config/pool_configs/cheetahcoin.json && cd /root/NOMP-neng && node init.js"]
 
-  # Container 4: Live RPC Sync Dashboard (Clean Heredoc - No Escaping)
+  # Container 4: Working Orange-Border Console + Live Sync Percentage & ETA
   chta_admin_interface:
     image: node:18-alpine
     container_name: chta_admin_interface
@@ -40,80 +40,7 @@ services:
     depends_on:
       - chta_node
     entrypoint: ["/bin/sh", "-c"]
-    command:
-      - |
-        cat << 'EOF' > /server.js
-        const http = require("http");
-        let lastBlocks = 0, lastTime = Date.now(), eta = "Calculating...";
-
-        function rpc(method) {
-          return new Promise(resolve => {
-            const data = JSON.stringify({ jsonrpc: "1.0", id: "1", method, params: [] });
-            const req = http.request({
-              hostname: "chta_node",
-              port: 4743,
-              method: "POST",
-              auth: "5tratum_user:5tratum_secure_pass",
-              headers: { "Content-Type": "application/json", "Content-Length": data.length }
-            }, res => {
-              let body = "";
-              res.on("data", chunk => body += chunk);
-              res.on("end", () => {
-                try { resolve(JSON.parse(body).result); } catch (e) { resolve(null); }
-              });
-            });
-            req.on("error", () => resolve(null));
-            req.write(data);
-            req.end();
-          });
-        }
-
-        http.createServer(async (req, res) => {
-          const info = await rpc("getblockchaininfo");
-          const net = await rpc("getnetworkinfo");
-          let pct = 0, blocks = 0, headers = 0, peers = net ? net.connections : 0;
-          let status = "Connecting to Cheetahcoin Core Daemon...";
-
-          if (info) {
-            blocks = info.blocks || 0;
-            headers = info.headers || 0;
-            pct = headers > 0 ? Math.min(100, (blocks / headers) * 100).toFixed(2) : 0;
-            const now = Date.now();
-            if (lastBlocks > 0 && blocks > lastBlocks) {
-              const rate = (blocks - lastBlocks) / ((now - lastTime) / 1000);
-              const rem = headers - blocks;
-              if (rem <= 0) eta = "Synced (Ready to Mine)";
-              else if (rate > 0) {
-                const sec = Math.round(rem / rate);
-                eta = sec > 3600 ? Math.floor(sec / 3600) + "h " + Math.floor((sec % 3600) / 60) + "m" : Math.floor(sec / 60) + "m " + (sec % 60) + "s";
-              }
-            }
-            lastBlocks = blocks;
-            lastTime = now;
-            status = pct >= 99.9 ? "Fully Synced & Ready" : "Synchronizing Blockchain...";
-          }
-
-          res.writeHead(200, { "Content-Type": "text/html" });
-          res.end(`<html><head><meta http-equiv="refresh" content="5"></head>
-          <body style="background:#111;color:#fff;font-family:sans-serif;padding:6%;text-align:center;">
-            <h2>Cheetahcoin Solo Miner Console</h2>
-            <div style="max-width:600px;margin:20px auto;background:#1e1e1e;padding:25px;border-radius:10px;border:1px solid #ff9900;">
-              <div style="font-size:18px;margin-bottom:10px;"><strong>${status}</strong></div>
-              <div style="background:#333;border-radius:6px;height:24px;overflow:hidden;margin:15px 0;">
-                <div style="background:#ff9900;height:100%;width:${pct}%;transition:width 0.5s;"></div>
-              </div>
-              <div style="font-size:22px;font-weight:bold;color:#ff9900;">${pct}%</div>
-              <p style="color:#ccc;">Blocks: <strong>${blocks.toLocaleString()}</strong> / ${headers.toLocaleString()} &nbsp;|&nbsp; Peers: <strong>${peers}</strong></p>
-              <p style="color:#aaa;">Est. Time Remaining: <strong>${eta}</strong></p>
-            </div>
-            <div style="max-width:600px;margin:20px auto;background:#1a1a1a;padding:15px;border-radius:8px;font-size:14px;color:#bbb;">
-              <strong>Stratum URL:</strong> stratum+tcp://192.168.68.74:3032<br>
-              <strong>Worker:</strong> CKTN9HLokShTFRzjNXsDYA7EBcDinBMNkL.worker1 &nbsp;|&nbsp; <strong>Pass:</strong> x
-            </div>
-          </body></html>`);
-        }).listen(8080);
-        EOF
-        node /server.js
+    command: ["node -e 'const http=require(`http`);let lb=0,lt=Date.now(),eta=`Calculating...`;function rpc(m){return new Promise(r=>{const d=JSON.stringify({jsonrpc:`1.0`,id:`1`,method:m,params:[]});const q=http.request({hostname:`chta_node`,port:4743,method:`POST`,auth:`5tratum_user:5tratum_secure_pass`,headers:{[`Content-Type`]:`application/json`,[`Content-Length`]:d.length}},s=>{let b=``;s.on(`data`,c=>b+=c);s.on(`end`,()=>{try{r(JSON.parse(b).result)}catch(e){r(null)}})});q.on(`error`,()=>r(null));q.write(d);q.end()})}http.createServer(async(req,res)=>{const i=await rpc(`getblockchaininfo`),n=await rpc(`getnetworkinfo`);let p=0,b=0,h=0,c=n?n.connections:0,st=`Starting Cheetahcoin Daemon...`;if(i){b=i.blocks||0;h=i.headers||0;p=h>0?Math.min(100,(b/h)*100).toFixed(2):0;const now=Date.now();if(lb>0&&b>lb){const rt=(b-lb)/((now-lt)/1000),rm=h-b;if(rm<=0)eta=`Synced (Ready)`;else if(rt>0){const s=Math.round(rm/rt);eta=s>3600?Math.floor(s/3600)+`h `+Math.floor((s%3600)/60)+`m`:Math.floor(s/60)+`m `+(s%60)+`s`}}lb=b;lt=now;st=p>=99.9?`Fully Synced & Ready`:`Synchronizing Blockchain...`}res.writeHead(200,{[`Content-Type`]:`text/html`});res.end(`<html><head><meta http-equiv=\"refresh\" content=\"5\"></head><body style=\"background:#111;color:#fff;font-family:sans-serif;padding:8%;text-align:center\"><h2>Cheetahcoin Node Administration Console</h2><div style=\"max-width:600px;margin:20px auto;background:#222;padding:20px;border-radius:8px;border:1px solid #ff9900\"><strong>Status:</strong> ${st}<div style=\"background:#333;border-radius:5px;height:20px;overflow:hidden;margin:15px 0\"><div style=\"background:#ff9900;height:100%;width:${p}%\"></div></div><div style=\"font-size:20px;color:#ff9900;font-weight:bold\">${p}%</div><p>Blocks: <strong>${b.toLocaleString()}</strong> / ${h.toLocaleString()} | Peers: <strong>${c}</strong></p><p>Est. Time Remaining: <strong>${eta}</strong></p></div><p>Point your miners to <strong>192.168.68.74:3032</strong> (Worker: <strong>CKTN9HLokShTFRzjNXsDYA7EBcDinBMNkL.worker1</strong>)</p></body></html>`)}).listen(8080)'"]
 
 volumes:
   chta_data:
