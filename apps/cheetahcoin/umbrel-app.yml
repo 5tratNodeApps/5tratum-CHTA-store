@@ -1,23 +1,18 @@
-id: cheetahcoin
+manifestVersion: 1.1
+id: 5tratnodeapps-cheetahcoin
+category: mining
 name: "Cheetahcoin Solo Miner"
 version: "1.1.0"
-description: "Advanced Cheetahcoin mining portal with status tracking and integrated settings controls."
-developer: "5stratNodeApps"
+tagline: "Run a full Cheetahcoin node and solo mining proxy"
+description: "Run a full Cheetahcoin (CHTA) node, NOMP stratum proxy, and live status console on your 5tratum device."
+developer: "5tratNodeApps"
 website: "https://github.com"
-submitter: "5stratNodeApps"
-icon: "https://githubusercontent.com"
-gallery: []
+dependencies: []
+repo: "https://github.com"
+support: "https://github.com/issues"
 port: 8080
-# Hooks the window directly into 5tratum's reverse web proxy layer
-proxy:
-  path: "/apps/cheetahcoin"
-# Registers input settings directly into the native 5tratum UI settings pane
-settings:
-  - id: developer_fee
-    name: "Developer Pool Fee (%)"
-    type: "number"
-    default: 1.0
-  - id: target_address
-    name: "Payout Wallet Address"
-    type: "text"
-    default: "CKTN9HLokShTFRzjNXsDYA7EBcDinBMNkL"
+gallery: []
+path: ""
+defaultUsername: ""
+defaultPassword: ""
+icon: "https://githubusercontent.com"
