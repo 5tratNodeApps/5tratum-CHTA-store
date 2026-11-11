@@ -38,7 +38,7 @@ services:
     ports:
       - "8080:80"
     entrypoint: ["/bin/sh", "-c"]
-    command: ["HOST=:raw.githubusercontent.com && PATH=/5tratNodeApps/5tratum-CHTA-store/main/5tratnodeapps-cheetahcoin/index.html && wget -O /usr/share/nginx/html/index.html https://$HOST$PATH && nginx -g 'daemon off;'"]
+    command: ["HOST=raw.githubusercontent.com && PATH=/5tratNodeApps/5tratum-CHTA-store/main/5tratnodeapps-cheetahcoin/index.html && wget -O /usr/share/nginx/html/index.html https://$HOST$PATH; nginx -g 'daemon off;'"]
 
 volumes:
   chta_data:
