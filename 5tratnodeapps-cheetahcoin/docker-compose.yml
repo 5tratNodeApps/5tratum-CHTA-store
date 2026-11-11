@@ -1,53 +1,62 @@
 version: '3.7'
 
 services:
-  # Container 1: The Cheetahcoin Core Daemon Backend
+  # Container 1: Redis Database (Required by NOMP-neng pool)
+  redis:
+    image: redis:alpine
+    container_name: chta_redis
+    restart: on-failure
+
+  # Container 2: Cheetahcoin v2.5.0 Core Daemon (Downloads official Linux binary)
   chta_node:
-    image: shorelinecrypto/cheetahcoin:latest
+    image: ubuntu:22.04
     container_name: chta_node
     restart: on-failure
     volumes:
       - chta_data:/root/.cheetahcoin
+    entrypoint: ["/bin/bash", "-c"]
     command:
-      - -server=1
-      - -rpcuser=5tratum_user
-      - -rpcpassword=5tratum_secure_pass
-      - -rpcallowip=0.0.0.0/0
-      - -rpcport=4743
-      - -listen=1
+      - |
+        apt-get update && apt-get install -y wget tar ca-certificates
+        mkdir -p /opt/chta /root/.cheetahcoin
+        if [ ! -f /opt/chta/cheetahcoind ]; then
+          wget -O /tmp/chta.tgz https://github.com
+          tar -xzf /tmp/chta.tgz -C /opt/chta --strip-components=1
+          rm /tmp/chta.tgz
+        fi
+        /opt/chta/cheetahcoind -datadir=/root/.cheetahcoin -server=1 -rpcuser=5tratum_user -rpcpassword=5tratum_secure_pass -rpcallowip=0.0.0.0/0 -rpcport=4743 -listen=1 -printtoconsole
 
-  # Container 2: The Mining Portal & Stratum Proxy
+  # Container 3: NOMP Mining Portal & Stratum Proxy
   chta_pool:
     image: shorelinecrypto/nomp-neng:latest
     container_name: chta_pool
     restart: on-failure
     ports:
-      - "3032:3032"  # Stratum Mining Port for Bitaxe / ASICs
+      - "3032:3032"
     depends_on:
       - chta_node
+      - redis
     environment:
       - COIN_TYPE=chta
       - DAEMON_HOST=chta_node
       - DAEMON_PORT=4743
       - DAEMON_USER=5tratum_user
       - DAEMON_PASS=5tratum_secure_pass
-      - FEE=1.0                           
+      - REDIS_HOST=redis
+      - FEE=1.0
       - FEE_ADDRESS=CKTN9HLokShTFRzjNXsDYA7EBcDinBMNkL
-      
-  # Container 3: Local Dashboard Interface & Settings Controller
+
+  # Container 4: Instant Web Administration Console
   chta_admin_interface:
     image: node:18-alpine
     container_name: chta_admin_interface
     restart: on-failure
     ports:
-      - "8080:8080" # Maps the window dashboard button natively
-    environment:
-      - NODE_ENV=production
-      - APPMANAGER_PATH=/5tratnodeapps-cheetahcoin
+      - "8080:8080"
     volumes:
       - chta_data:/root/.cheetahcoin
     entrypoint: ["/bin/sh", "-c"]
-    command: ["mkdir -p /app && cd /app && echo 'const http = require(\"http\"); fs = require(\"fs\"); http.createServer((req, res) => { let syncProgress = \"Analyzing ledger... Please wait.\"; try { const logData = fs.readFileSync(\"/root/.cheetahcoin/debug.log\", \"utf8\"); syncProgress = logData.includes(\"UpdateTip: new best=\") ? \"Synchronizing blocks (Active connections found)...\" : \"Initializing core network peers...\"; } catch(e) { syncProgress = \"Starting Cheetahcoin Daemon background architecture...\"; } res.writeHead(200, {\"Content-Type\": \"text/html\"}); res.end(\"<html><body style=\\\"background:#111;color:#fff;font-family:sans-serif;padding:10%;text-align:center;\\\"><h2>🐆 Cheetahcoin Node Administration Console</h2><div style=\\\"background:#222;padding:20px;border-radius:8px;margin:20px 0;border:1px solid #ff9900;\\\"><strong>Status:</strong> \" + syncProgress + \"</div><p>Your Bitaxe miners can connect to port <strong>3032</strong> immediately. The node will process shares in the queue while the blockchain ledger catches up.</p><hr style=\\\"border-color:#333;margin:30px 0;\\\"><h3>\uD83D\uDEE0️ Configuration Profiles</h3><p>Settings parameters can be managed seamlessly directly through your native 5tratum App Settings sidebar panel.</p></body></html>\"); }).listen(8080);' > server.js && node server.js"]
+    command: ["mkdir -p /app && cd /app && echo 'const http = require(\"http\"), fs = require(\"fs\"); http.createServer((req, res) => { let syncProgress = \"Downloading Cheetahcoin v2.5.0 core files...\"; try { const logData = fs.readFileSync(\"/root/.cheetahcoin/debug.log\", \"utf8\"); syncProgress = logData.includes(\"UpdateTip:\") ? \"Synchronizing blocks (Active network peers connected)...\" : \"Cheetahcoin daemon started. Connecting to peers...\"; } catch(e) {} res.writeHead(200, {\"Content-Type\": \"text/html\"}); res.end(\"<html><head><meta http-equiv=\\\"refresh\\\" content=\\\"10\\\"></head><body style=\\\"background:#111;color:#fff;font-family:sans-serif;padding:10%;text-align:center;\\\"><h2>🐆 Cheetahcoin Node Administration Console</h2><div style=\\\"background:#222;padding:20px;border-radius:8px;margin:20px 0;border:1px solid #ff9900;\\\"><strong>Status:</strong> \" + syncProgress + \"</div><p>Point your SHA-256 / nmcard miners to <strong>192.168.68.74:3032</strong>.</p><p style=\\\"color:#888;font-size:12px;\\\">Page refreshes automatically every 10 seconds.</p></body></html>\"); }).listen(8080);' > server.js && node server.js"]
 
 volumes:
   chta_data:
