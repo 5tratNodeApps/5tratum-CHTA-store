@@ -30,16 +30,15 @@ services:
     entrypoint: ["/bin/sh", "-c"]
     command: ["mkdir -p /root/NOMP-neng/config/pool_configs && cp /root/NOMP-neng/config_example.json /root/NOMP-neng/config/config.json && sed -i 's/127.0.0.1/redis/g' /root/NOMP-neng/config/config.json && echo '{\"enabled\":true,\"coin\":\"cheetahcoin.json\",\"address\":\"CKTN9HLokShTFRzjNXsDYA7EBcDinBMNkL\",\"rewardRecipients\":{\"CKTN9HLokShTFRzjNXsDYA7EBcDinBMNkL\":1.0},\"paymentProcessing\":{\"enabled\":true,\"paymentInterval\":600,\"minimumPayment\":5,\"daemon\":{\"host\":\"chta_node\",\"port\":4743,\"user\":\"5tratum_user\",\"password\":\"5tratum_secure_pass\"}},\"ports\":{\"3032\":{\"diff\":0.001,\"varDiff\":{\"minDiff\":0.0005,\"maxDiff\":100,\"targetTime\":15,\"retargetTime\":60,\"variancePercent\":30}}},\"daemons\":[{\"host\":\"chta_node\",\"port\":4743,\"user\":\"5tratum_user\",\"password\":\"5tratum_secure_pass\"}]}' > /root/NOMP-neng/config/pool_configs/cheetahcoin.json && cd /root/NOMP-neng && node init.js"]
 
-  # Container 4: Live Sync Progress & Admin Console (Zero-Quote Python Server)
+  # Container 4: Clean Nginx Web Console (Fetches index.html from GitHub)
   chta_admin_interface:
-    image: python:3-alpine
+    image: nginx:alpine
     container_name: chta_admin_interface
     restart: unless-stopped
     ports:
-      - "8080:8080"
-    volumes:
-      - chta_data:/root/.cheetahcoin:ro
-    command: python3 -c "import http.server, socketserver, urllib.request, json, base64, time; lb=[0, time.time()];\nclass H(http.server.BaseHTTPRequestHandler):\n def do_GET(s):\n  s.send_response(200); s.send_header('Content-type','text/html'); s.end_headers()\n  pct, blk, hdr, eta, st = 0, 0, 0, 'Calculating...', 'Connecting to Cheetahcoin Daemon...'\n  try:\n   req = urllib.request.Request('http://chta_node:4743', data=b'{\"jsonrpc\":\"1.0\",\"id\":\"1\",\"method\":\"getblockchaininfo\",\"params\":[]}', headers={'Authorization': 'Basic ' + base64.b64encode(b'5tratum_user:5tratum_secure_pass').decode()})\n   res = json.loads(urllib.request.urlopen(req, timeout=2).read())['result']\n   blk, hdr = res.get('blocks',0), res.get('headers',0)\n   pct = round(min(100, (blk/hdr)*100), 2) if hdr > 0 else 0\n   now = time.time()\n   if lb[0] > 0 and blk > lb[0]:\n    rt = (blk - lb[0]) / (now - lb[1])\n    rem = hdr - blk\n    eta = 'Synced (Ready)' if rem <= 0 else (f'{int((rem/rt)//3600)}h {int(((rem/rt)%3600)//60)}m' if rem/rt > 3600 else f'{int((rem/rt)//60)}m {int((rem/rt)%60)}s')\n   lb[0], lb[1] = blk, now\n   st = 'Fully Synced & Ready' if pct >= 99.9 else 'Synchronizing Blockchain...'\n  except Exception: pass\n  s.wfile.write(f'<html><head><meta http-equiv=\"refresh\" content=\"5\"></head><body style=\"background:#111;color:#fff;font-family:sans-serif;padding:8%;text-align:center\"><h2>Cheetahcoin Solo Miner Console</h2><div style=\"max-width:600px;margin:20px auto;background:#222;padding:20px;border-radius:8px;border:1px solid #ff9900\"><strong>Status:</strong> {st}<div style=\"background:#333;border-radius:5px;height:20px;overflow:hidden;margin:15px 0\"><div style=\"background:#ff9900;height:100%;width:{pct}%\"></div></div><div style=\"font-size:20px;color:#ff9900;font-weight:bold\">{pct}%</div><p>Blocks: <strong>{blk:,}</strong> / {hdr:,}</p><p>Est. Time Remaining: <strong>{eta}</strong></p></div><p>Stratum: <strong>192.168.68.74:3032</strong> | Worker: <strong>CKTN9HLokShTFRzjNXsDYA7EBcDinBMNkL.worker1</strong></p></body></html>'.encode())\nsocketserver.TCPServer(('', 8080), H).serve_forever()"
+      - "8080:80"
+    entrypoint: ["/bin/sh", "-c"]
+    command: ["wget -O /usr/share/nginx/html/index.html https://githubusercontent.com && nginx -g 'daemon off;'"]
 
 volumes:
   chta_data:
