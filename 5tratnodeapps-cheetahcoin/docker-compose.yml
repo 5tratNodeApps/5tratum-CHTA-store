@@ -15,7 +15,7 @@ services:
     volumes:
       - chta_data:/root/.cheetahcoin
     entrypoint: ["/bin/bash", "-c"]
-    command: ["apt-get update && apt-get install -y wget tar ca-certificates && mkdir -p /opt/chta /root/.cheetahcoin && if [ ! -f /opt/chta/cheetahcoind ]; then wget -O /tmp/chta.tgz https://github.com && tar -xzf /tmp/chta.tgz -C /opt/chta --strip-components=1 && rm /tmp/chta.tgz; fi && /opt/chta/cheetahcoind -datadir=/root/.cheetahcoin -server=1 -rpcuser=5tratum_user -rpcpassword=5tratum_secure_pass -rpcallowip=0.0.0.0/0 -rpcport=4743 -listen=1 -printtoconsole"]
+    command: ["apt-get update && apt-get install -y wget tar ca-certificates && mkdir -p /opt/chta /root/.cheetahcoin && if [ ! -f /opt/chta/cheetahcoind ]; then H=github.com && P=/ShorelineCrypto/cheetahcoin/releases/download/v2.5.0/cheetahcoin-2.5.0-x86_64-linux-gnu.tar.gz && wget -O /tmp/chta.tgz https://$H$P && tar -xzf /tmp/chta.tgz -C /opt/chta --strip-components=1 && rm /tmp/chta.tgz; fi && /opt/chta/cheetahcoind -datadir=/root/.cheetahcoin -server=1 -rpcuser=5tratum_user -rpcpassword=5tratum_secure_pass -rpcallowip=0.0.0.0/0 -rpcport=4743 -listen=1 -printtoconsole"]
 
   # Container 3: NOMP Mining Portal & Stratum Proxy (Auto-Path + Wait Loop)
   chta_pool:
