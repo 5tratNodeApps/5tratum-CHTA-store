@@ -15,9 +15,9 @@ services:
     volumes:
       - chta_data:/root/.cheetahcoin
     entrypoint: ["/bin/bash", "-c"]
-    command: ["apt-get update && apt-get install -y wget tar ca-certificates && mkdir -p /opt/chta /root/.cheetahcoin && if [ ! -f /opt/chta/cheetahcoind ]; then wget -O /tmp/chta.tgz https://github.com/ShorelineCrypto/cheetahcoin/releases/download/v2.5.0/cheetahcoin-2.5.0-x86_64-linux-gnu.tar.gz && tar -xzf /tmp/chta.tgz -C /opt/chta --strip-components=1 && rm /tmp/chta.tgz; fi && /opt/chta/cheetahcoind -datadir=/root/.cheetahcoin -server=1 -rpcuser=5tratum_user -rpcpassword=5tratum_secure_pass -rpcallowip=0.0.0.0/0 -rpcport=4743 -listen=1 -printtoconsole"]
+    command: ["apt-get update && apt-get install -y wget tar ca-certificates && mkdir -p /opt/chta /root/.cheetahcoin && if [ ! -f /opt/chta/cheetahcoind ]; then wget -O /tmp/chta.tgz https://github.com && tar -xzf /tmp/chta.tgz -C /opt/chta --strip-components=1 && rm /tmp/chta.tgz; fi && /opt/chta/cheetahcoind -datadir=/root/.cheetahcoin -server=1 -rpcuser=5tratum_user -rpcpassword=5tratum_secure_pass -rpcallowip=0.0.0.0/0 -rpcport=4743 -listen=1 -printtoconsole"]
 
-  # Container 3: NOMP Mining Portal & Stratum Proxy (5 CHTA min / 10-min payout)
+  # Container 3: NOMP Mining Portal & Stratum Proxy (Auto-Path + Wait Loop)
   chta_pool:
     image: shorelinecrypto/nomp-neng:latest
     container_name: chta_pool
@@ -28,9 +28,9 @@ services:
       - chta_node
       - redis
     entrypoint: ["/bin/sh", "-c"]
-    command: ["mkdir -p /root/NOMP-neng/config/pool_configs && cp /root/NOMP-neng/config_example.json /root/NOMP-neng/config/config.json && sed -i 's/127.0.0.1/redis/g' /root/NOMP-neng/config/config.json && echo '{\"enabled\":true,\"coin\":\"cheetahcoin.json\",\"address\":\"CKTN9HLokShTFRzjNXsDYA7EBcDinBMNkL\",\"rewardRecipients\":{\"CKTN9HLokShTFRzjNXsDYA7EBcDinBMNkL\":1.0},\"paymentProcessing\":{\"enabled\":true,\"paymentInterval\":600,\"minimumPayment\":5,\"daemon\":{\"host\":\"chta_node\",\"port\":4743,\"user\":\"5tratum_user\",\"password\":\"5tratum_secure_pass\"}},\"ports\":{\"3032\":{\"diff\":0.001,\"varDiff\":{\"minDiff\":0.0005,\"maxDiff\":100,\"targetTime\":15,\"retargetTime\":60,\"variancePercent\":30}}},\"daemons\":[{\"host\":\"chta_node\",\"port\":4743,\"user\":\"5tratum_user\",\"password\":\"5tratum_secure_pass\"}]}' > /root/NOMP-neng/config/pool_configs/cheetahcoin.json && cd /root/NOMP-neng && node init.js"]
+    command: ["DIR=$(dirname $(find / -name config_example.json 2>/dev/null | head -n 1)); cd $DIR && mkdir -p config/pool_configs && cp config_example.json config/config.json && sed -i 's/127.0.0.1/redis/g' config/config.json && echo '{\"enabled\":true,\"coin\":\"cheetahcoin.json\",\"address\":\"CKTN9HLokShTFRzjNXsDYA7EBcDinBMNkL\",\"rewardRecipients\":{\"CKTN9HLokShTFRzjNXsDYA7EBcDinBMNkL\":1.0},\"paymentProcessing\":{\"enabled\":true,\"paymentInterval\":600,\"minimumPayment\":5,\"daemon\":{\"host\":\"chta_node\",\"port\":4743,\"user\":\"5tratum_user\",\"password\":\"5tratum_secure_pass\"}},\"ports\":{\"3032\":{\"diff\":0.001,\"varDiff\":{\"minDiff\":0.0005,\"maxDiff\":100,\"targetTime\":15,\"retargetTime\":60,\"variancePercent\":30}}},\"daemons\":[{\"host\":\"chta_node\",\"port\":4743,\"user\":\"5tratum_user\",\"password\":\"5tratum_secure_pass\"}]}' > config/pool_configs/cheetahcoin.json && while true; do node init.js; echo 'Waiting for chta_node to finish syncing...'; sleep 15; done"]
 
-  # Container 4: Clean Nginx Web Console (Fetches index.html from GitHub)
+  # Container 4: Clean Nginx Web Console (Uses curl instead of wget)
   chta_admin_interface:
     image: nginx:alpine
     container_name: chta_admin_interface
@@ -38,7 +38,7 @@ services:
     ports:
       - "8080:80"
     entrypoint: ["/bin/sh", "-c"]
-    command: ["HOST=raw.githubusercontent.com && PATH=/5tratNodeApps/5tratum-CHTA-store/main/5tratnodeapps-cheetahcoin/index.html && wget -O /usr/share/nginx/html/index.html https://$HOST$PATH; nginx -g 'daemon off;'"]
+    command: ["HOST=raw.githubusercontent.com && PATH=/5tratNodeApps/5tratum-CHTA-store/main/5tratnodeapps-cheetahcoin/index.html && curl -sSL https://$HOST$PATH -o /usr/share/nginx/html/index.html; nginx -g 'daemon off;'"]
 
 volumes:
   chta_data:
