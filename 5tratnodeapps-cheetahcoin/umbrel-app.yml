@@ -2,14 +2,14 @@ manifestVersion: 1.1
 id: 5tratnodeapps-cheetahcoin
 category: mining
 name: "Cheetahcoin Solo Miner"
-version: "1.1.0"
+version: "1.1.1"
 tagline: "Run a full Cheetahcoin node and solo mining proxy"
 description: "Run a full Cheetahcoin (CHTA) node, NOMP stratum proxy, and live status console on your 5tratum device."
 developer: "5tratNodeApps"
 website: "https://github.com/5tratNodeApps/5tratum-CHTA-store"
 dependencies: []
 repo: "https://github.com/5tratNodeApps/5tratum-CHTA-store"
-support: "https://github.com"
+support: "https://github.com5tratNodeApps/5tratum-CHTA-store/issues"
 port: 8080
 gallery: []
 path: ""
