@@ -98,24 +98,59 @@ services:
           sleep 15
         done
 
-  # Container 4: Web Administration Console (Serves index.html or dark fallback on port 8080)
+  # Container 4: Web Administration Console (Serves index.html + live /status RPC endpoint)
   chta_admin_interface:
     image: node:18-alpine
     container_name: chta_admin_interface
     restart: unless-stopped
     ports:
       - "8080:8080" # Web UI port mapped to the native 5tratumOS app window
+    depends_on:
+      - chta_node
     entrypoint: ["/bin/sh", "-c"]
     command:
       - |
-        # Create Node HTTP server to fetch index.html from GitHub or display built-in fallback
         cat << 'EOF' > /server.js
         const http = require("http");
         const https = require("https");
-        const fallback = "<body style='background:#111;color:#fff;font-family:sans-serif;text-align:center;padding:8%'><div style='max-width:600px;margin:auto;background:#1e1e1e;padding:25px;border-radius:10px;border:1px solid #ff9900'><h2 style='color:#ff9900'>Cheetahcoin Solo Miner Console</h2><p><strong>Status:</strong> Node &amp; Pool Active</p><p><strong>Stratum URL:</strong> stratum+tcp://192.168.68.74:3032</p><p><strong>Worker:</strong> CKTN9HLokShTFRzjNXsDYA7EBcDinBMNkL.worker1</p></div></body>";
-        http.createServer((req, res) => {
+        const fallback = "<body style='background:#111;color:#fff;font-family:sans-serif;text-align:center;padding:8%'><div style='max-width:600px;margin:auto;background:#1e1e1e;padding:25px;border-radius:10px;border:1px solid #ff9900'><h2 style='color:#ff9900'>Cheetahcoin Solo Miner Console</h2><p><strong>Status:</strong> Node &amp; Pool Active</p><p><strong>Stratum Port:</strong> 3032</p></div></body>";
+
+        function rpc(method) {
+          return new Promise(resolve => {
+            const data = JSON.stringify({ jsonrpc: "1.0", id: "1", method, params: [] });
+            const req = http.request({
+              hostname: "chta_node",
+              port: 4743,
+              method: "POST",
+              auth: "5tratum_user:5tratum_secure_pass",
+              headers: { "Content-Type": "application/json", "Content-Length": data.length }
+            }, res => {
+              let body = "";
+              res.on("data", c => body += c);
+              res.on("end", () => {
+                try { resolve(JSON.parse(body).result); } catch (e) { resolve(null); }
+              });
+            });
+            req.on("error", () => resolve(null));
+            req.write(data);
+            req.end();
+          });
+        }
+
+        http.createServer(async (req, res) => {
+          if (req.url === "/status") {
+            const info = await rpc("getblockchaininfo");
+            const net = await rpc("getnetworkinfo");
+            const blocks = info ? (info.blocks || 0) : 0;
+            const headers = info ? (info.headers || 0) : 0;
+            const pct = headers > 0 ? Math.min(100, (blocks / headers) * 100) : 0;
+            const peers = net ? (net.connections || 0) : 0;
+            res.writeHead(200, { "Content-Type": "application/json" });
+            return res.end(JSON.stringify({ blocks, headers, pct, peers }));
+          }
+
           https.get({
-            hostname: "raw.githubusercontent.com",
+            hostname: "://githubusercontent.com",
             path: "/5tratNodeApps/5tratum-CHTA-store/main/5tratnodeapps-cheetahcoin/index.html",
             headers: { "User-Agent": "5tratumOS" }
           }, r => {
