@@ -9,7 +9,13 @@
     .card { max-width: 600px; margin: 20px auto; background: #1e1e1e; padding: 25px; border-radius: 10px; border: 1px solid #ff9900; }
     .subcard { max-width: 600px; margin: 20px auto; background: #1a1a1a; padding: 22px; border-radius: 10px; font-size: 14px; color: #ccc; text-align: left; }
     h2 { color: #ff9900; margin-top: 0; text-align: center; }
-    label { display: block; margin: 12px 0 6px; font-weight: bold; color: #fff; font-size: 13px; }
+    .progress-wrap { background: #333; border-radius: 6px; height: 22px; overflow: hidden; margin: 15px 0 8px; }
+    .progress-bar { background: #ff9900; height: 100%; width: 0%; transition: width 0.5s ease; }
+    .pct-text { font-size: 20px; font-weight: bold; color: #ff9900; }
+    .block-info { font-size: 13px; color: #aaa; margin: 6px 0 14px; }
+    .notice-wait { background: #2d1f0a; border: 1px solid #ff9900; color: #ffcc80; padding: 10px 14px; border-radius: 6px; font-size: 13px; line-height: 1.4; }
+    .notice-ready { background: #0f2918; border: 1px solid #2ecc71; color: #a3e4d7; padding: 10px 14px; border-radius: 6px; font-size: 13px; line-height: 1.4; }
+    label { display: block; margin: 14px 0 6px; font-weight: bold; color: #fff; font-size: 13px; }
     input { width: 100%; box-sizing: border-box; padding: 10px; border-radius: 6px; border: 1px solid #444; background: #111; color: #ff9900; font-family: monospace; font-size: 14px; }
     input:focus { outline: none; border-color: #ff9900; }
     .output-row { display: flex; align-items: center; justify-content: space-between; background: #262626; padding: 10px 12px; border-radius: 6px; margin-top: 6px; gap: 10px; }
@@ -22,8 +28,13 @@
 <body>
   <div class="card">
     <h2>Cheetahcoin Solo Miner Console</h2>
-    <p><strong>Node &amp; Pool Status:</strong> Active &amp; Running</p>
-    <p style="color:#aaa; font-size:14px;">The Cheetahcoin v2.5.0 daemon is syncing the blockchain in the background. Enter your personal CHTA wallet below to generate your miner connection settings.</p>
+    <div id="syncStatus"><strong>Node Status:</strong> Checking blockchain sync...</div>
+    <div class="progress-wrap"><div class="progress-bar" id="progressBar"></div></div>
+    <div class="pct-text" id="pctText">0.00%</div>
+    <div class="block-info" id="blockInfo">Blocks: -- / -- &nbsp;|&nbsp; Peers: --</div>
+    <div class="notice-wait" id="connectNotice">
+      <strong>Notice:</strong> Please wait until the blockchain sync reaches <strong>100%</strong> before connecting your mining devices. Stratum port 3032 opens automatically once synced.
+    </div>
   </div>
 
   <div class="subcard">
@@ -79,6 +90,30 @@
       btn.textContent = "Copied!";
       setTimeout(() => btn.textContent = orig, 1500);
     }
+
+    async function fetchSync() {
+      try {
+        const res = await fetch("/status");
+        if (!res.ok) return;
+        const data = await res.json();
+        const pct = parseFloat(data.pct) || 0;
+        document.getElementById("progressBar").style.width = pct + "%";
+        document.getElementById("pctText").textContent = pct.toFixed(2) + "%";
+        document.getElementById("blockInfo").textContent = "Blocks: " + data.blocks.toLocaleString() + " / " + data.headers.toLocaleString() + " | Peers: " + data.peers;
+        const notice = document.getElementById("connectNotice");
+        if (pct >= 99.9 && data.headers > 0) {
+          document.getElementById("syncStatus").innerHTML = "<strong>Node Status:</strong> Fully Synced &amp; Ready";
+          notice.className = "notice-ready";
+          notice.innerHTML = "<strong>Ready to Mine:</strong> Blockchain sync is at 100%. You can now connect your mining devices to port <strong>3032</strong>.";
+        } else {
+          document.getElementById("syncStatus").innerHTML = "<strong>Node Status:</strong> Synchronizing Blockchain...";
+          notice.className = "notice-wait";
+        }
+      } catch (e) {}
+    }
+
+    fetchSync();
+    setInterval(fetchSync, 5000);
   </script>
 </body>
 </html>
