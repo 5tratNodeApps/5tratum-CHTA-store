@@ -150,7 +150,7 @@ services:
           }
 
           https.get({
-            hostname: "://githubusercontent.com",
+            hostname: "raw.githubusercontent.com",
             path: "/5tratNodeApps/5tratum-CHTA-store/main/5tratnodeapps-cheetahcoin/index.html",
             headers: { "User-Agent": "5tratumOS" }
           }, r => {
