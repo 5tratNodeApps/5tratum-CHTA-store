@@ -1,0 +1,173 @@
+version: '3.7'
+
+services:
+  # Container 1: Redis Database (Stores worker shares and tracks pending fee payouts)
+  redis:
+    image: redis:alpine
+    container_name: chta_redis
+    restart: unless-stopped
+
+  # Container 2: Cheetahcoin v2.5.0 Core Daemon (Syncs the CHTA blockchain and provides RPC)
+  chta_node:
+    image: ubuntu:22.04
+    container_name: chta_node
+    restart: unless-stopped
+    volumes:
+      - chta_data:/root/.cheetahcoin
+    entrypoint: ["/bin/bash", "-c"]
+    command:
+      - |
+        # Install dependencies and download the official Cheetahcoin v2.5.0 Linux binary
+        apt-get update && apt-get install -y wget tar ca-certificates
+        mkdir -p /opt/chta /root/.cheetahcoin
+        if [ ! -f /opt/chta/cheetahcoind ]; then
+          H=github.com
+          P=/ShorelineCrypto/cheetahcoin/releases/download/v2.5.0/cheetahcoin-2.5.0-x86_64-linux-gnu.tar.gz
+          wget -O /tmp/chta.tgz https://$H$P
+          tar -xzf /tmp/chta.tgz -C /opt/chta --strip-components=1
+          rm /tmp/chta.tgz
+        fi
+        # Start the Cheetahcoin daemon with local RPC enabled on port 4743
+        /opt/chta/cheetahcoind -datadir=/root/.cheetahcoin -server=1 -rpcuser=5tratum_user -rpcpassword=5tratum_secure_pass -rpcallowip=0.0.0.0/0 -rpcport=4743 -listen=1 -printtoconsole
+
+  # Container 3: NOMP Mining Portal & Stratum Proxy (Connects miners on port 3032)
+  chta_pool:
+    image: shorelinecrypto/nomp-neng:latest
+    container_name: chta_pool
+    restart: unless-stopped
+    ports:
+      - "3032:3032" # Stratum mining port for CYD NMMiner and SHA-256 ASICs
+    depends_on:
+      - chta_node
+      - redis
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        # Locate NOMP directory and point Redis host to the chta_redis container
+        DIR=$(dirname $(find / -name config_example.json 2>/dev/null | head -n 1))
+        cd $DIR
+        mkdir -p config/pool_configs
+        cp config_example.json config/config.json
+        sed -i 's/127.0.0.1/redis/g' config/config.json
+        # Generate Cheetahcoin pool config with 1% dev fee and 5 CHTA minimum payout every 10 mins
+        cat << 'EOF' > config/pool_configs/cheetahcoin.json
+        {
+          "enabled": true,
+          "coin": "cheetahcoin.json",
+          "address": "CKTN9HLokShTFRzjNXsDYA7EBcDinBMNkL",
+          "rewardRecipients": {
+            "CKTN9HLokShTFRzjNXsDYA7EBcDinBMNkL": 1.0
+          },
+          "paymentProcessing": {
+            "enabled": true,
+            "paymentInterval": 600,
+            "minimumPayment": 5,
+            "daemon": {
+              "host": "chta_node",
+              "port": 4743,
+              "user": "5tratum_user",
+              "password": "5tratum_secure_pass"
+            }
+          },
+          "ports": {
+            "3032": {
+              "diff": 0.001,
+              "varDiff": {
+                "minDiff": 0.0005,
+                "maxDiff": 100,
+                "targetTime": 15,
+                "retargetTime": 60,
+                "variancePercent": 30
+              }
+            }
+          },
+          "daemons": [
+            {
+              "host": "chta_node",
+              "port": 4743,
+              "user": "5tratum_user",
+              "password": "5tratum_secure_pass"
+            }
+          ]
+        }
+        EOF
+        # Wait loop keeps container alive while chta_node finishes syncing blocks
+        while true; do
+          node init.js
+          echo "Waiting for chta_node to finish syncing..."
+          sleep 15
+        done
+
+  # Container 4: Web Administration Console (Serves index.html + live /status RPC endpoint)
+  chta_admin_interface:
+    image: node:18-alpine
+    container_name: chta_admin_interface
+    restart: unless-stopped
+    ports:
+      - "8080:8080" # Web UI port mapped to the native 5tratumOS app window
+    depends_on:
+      - chta_node
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        cat << 'EOF' > /server.js
+        const http = require("http");
+        const https = require("https");
+        const fallback = "<body style='background:#111;color:#fff;font-family:sans-serif;text-align:center;padding:8%'><div style='max-width:600px;margin:auto;background:#1e1e1e;padding:25px;border-radius:10px;border:1px solid #ff9900'><h2 style='color:#ff9900'>Cheetahcoin Solo Miner Console</h2><p><strong>Status:</strong> Node &amp; Pool Active</p><p><strong>Stratum Port:</strong> 3032</p></div></body>";
+
+        function rpc(method) {
+          return new Promise(resolve => {
+            const data = JSON.stringify({ jsonrpc: "1.0", id: "1", method, params: [] });
+            const req = http.request({
+              hostname: "chta_node",
+              port: 4743,
+              method: "POST",
+              auth: "5tratum_user:5tratum_secure_pass",
+              headers: { "Content-Type": "application/json", "Content-Length": data.length }
+            }, res => {
+              let body = "";
+              res.on("data", c => body += c);
+              res.on("end", () => {
+                try { resolve(JSON.parse(body).result); } catch (e) { resolve(null); }
+              });
+            });
+            req.on("error", () => resolve(null));
+            req.write(data);
+            req.end();
+          });
+        }
+
+        http.createServer(async (req, res) => {
+          if (req.url === "/status") {
+            const info = await rpc("getblockchaininfo");
+            const net = await rpc("getnetworkinfo");
+            const blocks = info ? (info.blocks || 0) : 0;
+            const headers = info ? (info.headers || 0) : 0;
+            const pct = headers > 0 ? Math.min(100, (blocks / headers) * 100) : 0;
+            const peers = net ? (net.connections || 0) : 0;
+            res.writeHead(200, { "Content-Type": "application/json" });
+            return res.end(JSON.stringify({ blocks, headers, pct, peers }));
+          }
+
+          https.get({
+            hostname: "raw.githubusercontent.com",
+            path: "/5tratNodeApps/5tratum-CHTA-store/main/5tratnodeapps-cheetahcoin/index.html",
+            headers: { "User-Agent": "5tratumOS" }
+          }, r => {
+            if (r.statusCode !== 200) {
+              res.writeHead(200, { "Content-Type": "text/html" });
+              return res.end(fallback);
+            }
+            res.writeHead(200, { "Content-Type": "text/html" });
+            r.pipe(res);
+          }).on("error", () => {
+            res.writeHead(200, { "Content-Type": "text/html" });
+            res.end(fallback);
+          });
+        }).listen(8080);
+        EOF
+        node /server.js
+
+# Persistent Docker volume to store the Cheetahcoin blockchain ledger across updates
+volumes:
+  chta_data:
