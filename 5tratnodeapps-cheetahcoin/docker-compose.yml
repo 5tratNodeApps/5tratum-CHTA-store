@@ -98,22 +98,20 @@ services:
           sleep 15
         done
 
-  # Container 4: Web Administration Console (Serves index.html + live /status RPC endpoint)
+    # Container 4: Instant Web Console (Boots immediately while node & pool sync in background)
   chta_admin_interface:
     image: node:18-alpine
     container_name: chta_admin_interface
     restart: unless-stopped
     ports:
-      - "8080:8080" # Web UI port mapped to the native 5tratumOS app window
-    depends_on:
-      - chta_node
+      - "8080:8080"
     entrypoint: ["/bin/sh", "-c"]
     command:
       - |
         cat << 'EOF' > /server.js
         const http = require("http");
         const https = require("https");
-        const fallback = "<body style='background:#111;color:#fff;font-family:sans-serif;text-align:center;padding:8%'><div style='max-width:600px;margin:auto;background:#1e1e1e;padding:25px;border-radius:10px;border:1px solid #ff9900'><h2 style='color:#ff9900'>Cheetahcoin Solo Miner Console</h2><p><strong>Status:</strong> Node &amp; Pool Active</p><p><strong>Stratum Port:</strong> 3032</p></div></body>";
+        const fallback = "<html><head><meta http-equiv='refresh' content='5'></head><body style='background:#111;color:#fff;font-family:sans-serif;text-align:center;padding:8%'><div style='max-width:600px;margin:auto;background:#1e1e1e;padding:25px;border-radius:10px;border:1px solid #ff9900'><h2 style='color:#ff9900'>Cheetahcoin Solo Miner Console</h2><p><strong>Status:</strong> Initializing Background Sync...</p><p style='color:#aaa;font-size:13px'>Loading live console interface...</p></div></body></html>";
 
         function rpc(method) {
           return new Promise(resolve => {
