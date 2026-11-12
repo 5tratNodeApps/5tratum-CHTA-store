@@ -2,27 +2,83 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta http-equiv="refresh" content="10">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Cheetahcoin Solo Miner Console</title>
   <style>
-    body { background: #111; color: #fff; font-family: sans-serif; padding: 6%; text-align: center; margin: 0; }
+    body { background: #111; color: #fff; font-family: sans-serif; padding: 5%; text-align: center; margin: 0; }
     .card { max-width: 600px; margin: 20px auto; background: #1e1e1e; padding: 25px; border-radius: 10px; border: 1px solid #ff9900; }
-    .subcard { max-width: 600px; margin: 20px auto; background: #1a1a1a; padding: 18px; border-radius: 8px; font-size: 14px; color: #ccc; line-height: 1.6; }
-    h2 { color: #ff9900; margin-top: 0; }
-    code { background: #2b2b2b; padding: 3px 6px; border-radius: 4px; color: #ff9900; }
+    .subcard { max-width: 600px; margin: 20px auto; background: #1a1a1a; padding: 22px; border-radius: 10px; font-size: 14px; color: #ccc; text-align: left; }
+    h2 { color: #ff9900; margin-top: 0; text-align: center; }
+    label { display: block; margin: 12px 0 6px; font-weight: bold; color: #fff; font-size: 13px; }
+    input { width: 100%; box-sizing: border-box; padding: 10px; border-radius: 6px; border: 1px solid #444; background: #111; color: #ff9900; font-family: monospace; font-size: 14px; }
+    input:focus { outline: none; border-color: #ff9900; }
+    .output-row { display: flex; align-items: center; justify-content: space-between; background: #262626; padding: 10px 12px; border-radius: 6px; margin-top: 6px; gap: 10px; }
+    code { color: #ff9900; font-size: 13px; word-break: break-all; }
+    button { background: #ff9900; color: #111; border: none; padding: 7px 12px; border-radius: 5px; font-weight: bold; cursor: pointer; white-space: nowrap; }
+    button:hover { background: #e68a00; }
+    .note { font-size: 12px; color: #888; margin-top: 15px; text-align: center; }
   </style>
 </head>
 <body>
   <div class="card">
     <h2>Cheetahcoin Solo Miner Console</h2>
     <p><strong>Node &amp; Pool Status:</strong> Active &amp; Running</p>
-    <p style="color:#aaa; font-size:14px;">The Cheetahcoin v2.5.0 daemon is syncing the blockchain in the background. Check the StratumOS app logs for exact block height progress.</p>
+    <p style="color:#aaa; font-size:14px;">The Cheetahcoin v2.5.0 daemon is syncing the blockchain in the background. Enter your personal CHTA wallet below to generate your miner connection settings.</p>
   </div>
+
   <div class="subcard">
-    <strong>Stratum Pool URL:</strong> <code>stratum+tcp://192.168.68.74:3032</code><br>
-    <strong>Worker Username:</strong> <code>CKTN9HLokShTFRzjNXsDYA7EBcDinBMNkL.worker1</code><br>
-    <strong>Password:</strong> <code>x</code>
+    <label for="wallet">Your CHTA Payout Wallet Address:</label>
+    <input type="text" id="wallet" placeholder="Paste your Cheetahcoin (CHTA) address here..." oninput="updateConfig()">
+
+    <label for="worker">Worker Name (Optional):</label>
+    <input type="text" id="worker" value="worker1" oninput="updateConfig()">
+
+    <label>Stratum Pool URL (Auto-Detected):</label>
+    <div class="output-row">
+      <code id="stratumUrl">stratum+tcp://192.168.1.100:3032</code>
+      <button onclick="copyText('stratumUrl', this)">Copy</button>
+    </div>
+
+    <label>Miner Worker Username:</label>
+    <div class="output-row">
+      <code id="workerOutput">YOUR_CHTA_ADDRESS.worker1</code>
+      <button onclick="copyText('workerOutput', this)">Copy</button>
+    </div>
+
+    <label>Miner Password:</label>
+    <div class="output-row">
+      <code id="passOutput">x</code>
+      <button onclick="copyText('passOutput', this)">Copy</button>
+    </div>
+
+    <p class="note">Your wallet address is saved locally in your browser. A 1% pool developer fee supports ongoing app maintenance.</p>
   </div>
+
+  <script>
+    const host = window.location.hostname;
+    const isLocal = host && !host.includes("github.io") && host !== "127.0.0.1" && host !== "localhost";
+    document.getElementById("stratumUrl").textContent = "stratum+tcp://" + (isLocal ? host : "YOUR_NODE_IP") + ":3032";
+
+    const savedWallet = localStorage.getItem("chta_user_wallet");
+    const savedWorker = localStorage.getItem("chta_user_worker");
+    if (savedWallet) document.getElementById("wallet").value = savedWallet;
+    if (savedWorker) document.getElementById("worker").value = savedWorker;
+    updateConfig();
+
+    function updateConfig() {
+      const w = document.getElementById("wallet").value.trim();
+      const n = document.getElementById("worker").value.trim() || "worker1";
+      localStorage.setItem("chta_user_wallet", w);
+      localStorage.setItem("chta_user_worker", n);
+      document.getElementById("workerOutput").textContent = (w || "YOUR_CHTA_ADDRESS") + "." + n;
+    }
+
+    function copyText(id, btn) {
+      navigator.clipboard.writeText(document.getElementById(id).textContent);
+      const orig = btn.textContent;
+      btn.textContent = "Copied!";
+      setTimeout(() => btn.textContent = orig, 1500);
+    }
+  </script>
 </body>
 </html>
