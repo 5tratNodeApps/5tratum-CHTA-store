@@ -281,7 +281,8 @@ services:
             const peers = net ? (net.connections || 0) : 0;
             res.writeHead(200, { "Content-Type": "application/json" });
             return res.end(JSON.stringify({ blocks, headers, pct, peers, pool }));
-          }        res.writeHead(200, { "Content-Type": "text/html" });
+          }
+          res.writeHead(200, { "Content-Type": "text/html" });
           fs.createReadStream("/index.html").pipe(res);
         }).listen(8080, "0.0.0.0");
         EOF
