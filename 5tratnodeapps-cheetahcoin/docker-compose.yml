@@ -287,5 +287,70 @@ services:
         }).listen(8080, "0.0.0.0");
         EOF
         node /server.js
+  # Container 5: NOMP Mining Portal & Stratum Proxy (Connects miners on port 3032)
+  chta_pool:
+    image: shorelinecrypto/nomp-neng:latest
+    container_name: chta_pool
+    restart: unless-stopped
+    ports:
+      - "3032:3032"
+    depends_on:
+      - chta_node
+      - redis
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        DIR=$$(dirname $$(find / -name config_example.json 2>/dev/null | head -n 1))
+        cd $$DIR
+        mkdir -p config/pool_configs
+        cp config_example.json config/config.json
+        sed -i 's/127.0.0.1/redis/g' config/config.json
+        cat << 'EOF' > config/pool_configs/cheetahcoin.json
+        {
+          "enabled": true,
+          "coin": "cheetahcoin.json",
+          "address": "CKTN9HLokShTFRzjNXsDYA7EBcDinBMNkL",
+          "rewardRecipients": {
+            "CKTN9HLokShTFRzjNXsDYA7EBcDinBMNkL": 1.0
+          },
+          "paymentProcessing": {
+            "enabled": true,
+            "paymentInterval": 600,
+            "minimumPayment": 5,
+            "daemon": {
+              "host": "chta_node",
+              "port": 4743,
+              "user": "5tratum_user",
+              "password": "5tratum_secure_pass"
+            }
+          },
+          "ports": {
+            "3032": {
+              "diff": 0.001,
+              "varDiff": {
+                "minDiff": 0.0005,
+                "maxDiff": 100,
+                "targetTime": 15,
+                "retargetTime": 60,
+                "variancePercent": 30
+              }
+            }
+          },
+          "daemons": [
+            {
+              "host": "chta_node",
+              "port": 4743,
+              "user": "5tratum_user",
+              "password": "5tratum_secure_pass"
+            }
+          ]
+        }
+        EOF
+        while true; do
+          node init.js
+          echo "Waiting for chta_node to finish syncing..."
+          sleep 15
+        done
+
 volumes:
   chta_data:
