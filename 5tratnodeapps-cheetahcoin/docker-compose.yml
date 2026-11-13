@@ -144,6 +144,12 @@ services:
             <div class="notice-wait" id="connectNotice">
               <strong>Notice:</strong> Please wait until the blockchain sync reaches <strong>100%</strong> before connecting your mining devices. Stratum port 3032 opens automatically once synced.
             </div>
+            
+          </div>
+          <div class="subcard">
+            <h3 style="color:#ff9900;margin-top:0">Connected Devices &amp; Stats</h3>
+            <p><strong>Total Hashrate:</strong> <span id="totalHash" style="color:#ff9900">0 H/s</span> &nbsp;|&nbsp; <strong>Active Workers:</strong> <span id="workerCount" style="color:#ff9900">0</span> &nbsp;|&nbsp; <strong>Blocks Found:</strong> <span id="blocksFound" style="color:#ff9900">0</span></p>
+            <div id="workerList" style="font-size:13px;color:#aaa">No active workers connected yet.</div>
           </div>
 
           <div class="subcard">
@@ -218,6 +224,13 @@ services:
                   document.getElementById("syncStatus").innerHTML = "<strong>Node Status:</strong> Synchronizing Blockchain...";
                   notice.className = "notice-wait";
                 }
+                                if (data.pool) {
+                  document.getElementById("totalHash").textContent = data.pool.hashrate;
+                  document.getElementById("workerCount").textContent = data.pool.workers.length;
+                  document.getElementById("blocksFound").textContent = data.pool.blocks;
+                  document.getElementById("workerList").innerHTML = data.pool.workers.length ? data.pool.workers.map(w => `• <strong>${w.name.split('.').pop()}</strong>: <span style="color:#ff9900">${w.hashrate}</span>`).join("<br>") : "No active workers connected yet.";
+                }
+
               } catch (e) {}
             }
 
@@ -258,15 +271,19 @@ services:
           if (req.url === "/status") {
             const info = await rpc("getblockchaininfo");
             const net = await rpc("getnetworkinfo");
+            const pool = await new Promise(r => http.get("http://chta_pool/api/stats", res => {
+              let b = ""; res.on("data", c => b += c);
+              res.on("end", () => { try { const p = JSON.parse(b).pools.cheetahcoin; r({ hashrate: p.hashrateString || "0 H/s", blocks: (p.blocks.pending || 0) + (p.blocks.confirmed || 0), workers: Object.entries(p.workers || {}).map(([name, i]) => ({ name, hashrate: i.hashrateString || "0 H/s" })) }); } catch (e) { r(null); } });
+            }).on("error", () => r(null)));
             const blocks = info ? (info.blocks || 0) : 0;
             const headers = info ? (info.headers || 0) : 0;
             const pct = headers > 0 ? Math.min(100, (blocks / headers) * 100) : 0;
             const peers = net ? (net.connections || 0) : 0;
             res.writeHead(200, { "Content-Type": "application/json" });
-            return res.end(JSON.stringify({ blocks, headers, pct, peers }));
+            return res.end(JSON.stringify({ blocks, headers, pct, peers, pool }));
           }
-
-          res.writeHead(200, { "Content-Type": "text/html" });
+          
+res.writeHead(200, { "Content-Type": "text/html" });
           fs.createReadStream("/index.html").pipe(res);
         }).listen(8080, "0.0.0.0");
         EOF
