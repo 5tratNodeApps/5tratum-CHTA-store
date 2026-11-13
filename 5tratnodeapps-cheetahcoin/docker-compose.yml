@@ -228,7 +228,7 @@ services:
                   document.getElementById("totalHash").textContent = data.pool.hashrate;
                   document.getElementById("workerCount").textContent = data.pool.workers.length;
                   document.getElementById("blocksFound").textContent = data.pool.blocks;
-                  document.getElementById("workerList").innerHTML = data.pool.workers.length ? data.pool.workers.map(w => `• <strong>${w.name.split('.').pop()}</strong>: <span style="color:#ff9900">${w.hashrate}</span>`).join("<br>") : "No active workers connected yet.";
+                  document.getElementById("workerList").innerHTML = data.pool.workers.length ? data.pool.workers.map(w => "• <strong>" + w.name.split('.').pop() + "</strong>: <span style='color:#ff9900'>" + w.hashrate + "</span>").join("<br>") : "No active workers connected yet.";
                 }
 
               } catch (e) {}
