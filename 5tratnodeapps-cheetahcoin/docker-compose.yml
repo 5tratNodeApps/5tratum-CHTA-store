@@ -302,10 +302,10 @@ services:
       - |
         DIR=$$(dirname $$(find / -name config_example.json 2>/dev/null | head -n 1))
         cd $$DIR
-        mkdir -p config/pool_configs
-        cp config_example.json config/config.json
-        sed -i 's/127.0.0.1/redis/g' config/config.json
-        cat << 'EOF' > config/pool_configs/cheetahcoin.json
+        mkdir -p pool_configs
+        cp config_example.json config.json
+        sed -i 's/127.0.0.1/redis/g' config.json
+        cat << 'EOF' > pool_configs/cheetahcoin.json
         {
           "enabled": true,
           "coin": "cheetahcoin.json",
