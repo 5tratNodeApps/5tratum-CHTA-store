@@ -305,8 +305,8 @@ services:
         mkdir -p pool_configs
         cp config_example.json config.json
         sed -i 's/127.0.0.1/redis/g' config.json
-        sed -i 's/172.23.0.2/0.0.0.0/g' config.json
-        sed -i 's/172.24.0.4/0.0.0.0/g' config.json
+        sed -i 's/127.0.0.1/redis/g' config.json
+        find /opt/node-open-mining-portal -maxdepth 3 -name "*.json" -exec sed -i 's/172\.23\.0\.2/0.0.0.0/g; s/172\.24\.0\.4/0.0.0.0/g' {} +
         cat << 'EOF' > pool_configs/cheetahcoin.json
         {
           "enabled": true,
