@@ -302,6 +302,7 @@ services:
       - |
         DIR=$$(dirname $$(find / -maxdepth 4 -name init.js 2>/dev/null | grep -v node_modules | head -n 1))
         cd $$DIR
+        rm -rf config.json
         mkdir -p pool_configs
         cp config_example.json config.json
         sed -i 's/127.0.0.1/redis/g' config.json
