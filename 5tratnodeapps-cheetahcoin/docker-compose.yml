@@ -297,6 +297,8 @@ services:
     depends_on:
       - chta_node
       - redis
+    volumes:
+      - chta_data:/data
     entrypoint: ["/bin/sh", "-c"]
     command:
       - |
@@ -308,11 +310,18 @@ services:
         sed -i 's/172.23.0.2/0.0.0.0/g' config.json
         sed -i 's/cryppit.com/0.0.0.0/g' config.json
         sed -i 's/"cliHost": "redis"/"cliHost": "0.0.0.0"/g' config.json
-        cat << 'EOF' > pool_configs/cheetahcoin.json
+        if [ ! -s /data/pool_address.txt ]; then
+          until curl -s --user 5tratum_user:5tratum_secure_pass --data-binary '{"jsonrpc":"1.0","id":"1","method":"getnewaddress","params":["pool"]}' -H 'content-type: text/plain;' http://chta_node:4743/ | grep -o '"result":"[^"]*"' | cut -d'"' -f4 > /data/pool_address.txt && [ -s /data/pool_address.txt ]; do
+            echo "Waiting for chta_node RPC to create permanent pool address..."
+            sleep 5
+          done
+        fi
+        POOL_ADDR=$$(cat /data/pool_address.txt)
+        cat << EOF > pool_configs/cheetahcoin.json
         {
           "enabled": true,
           "coin": "cheetahcoin.json",
-          "address": "CKTN9HLokShTFRzjNXsDYA7EBcDinBMNkL",
+          "address": "$$POOL_ADDR",
           "rewardRecipients": {
             "CKTN9HLokShTFRzjNXsDYA7EBcDinBMNkL": 1.0
           },
