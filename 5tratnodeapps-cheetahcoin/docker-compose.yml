@@ -300,7 +300,7 @@ services:
     entrypoint: ["/bin/sh", "-c"]
     command:
       - |
-        DIR=$$(dirname $$(find / -name config_example.json 2>/dev/null | head -n 1))
+        DIR=$$(dirname $$(find / -maxdepth 4 -name init.js 2>/dev/null | grep -v node_modules | head -n 1))
         cd $$DIR
         mkdir -p pool_configs
         cp config_example.json config.json
