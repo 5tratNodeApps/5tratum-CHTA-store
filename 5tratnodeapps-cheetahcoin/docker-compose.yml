@@ -306,7 +306,7 @@ services:
         cp config_example.json config.json
         sed -i 's/127.0.0.1/redis/g' config.json
         sed -i 's/172.23.0.2/0.0.0.0/g' config.json
-        sed -i 's/://cryppit.com' config.json
+        sed -i 's/cryppit.com/0.0.0.0/g' config.json
         cat << 'EOF' > pool_configs/cheetahcoin.json
         {
           "enabled": true,
