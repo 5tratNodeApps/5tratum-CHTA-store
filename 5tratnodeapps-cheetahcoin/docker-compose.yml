@@ -301,7 +301,7 @@ services:
     command:
       - |
         cd /opt/node-open-mining-portal
-        rm -rf config.json
+        rm -rf config.json pool_configs
         mkdir -p pool_configs
         cp config_example.json config.json
         sed -i 's/127.0.0.1/redis/g' config.json
