@@ -74,7 +74,7 @@ services:
     image: redis:alpine
     container_name: chta_redis
     restart: unless-stopped
-
+    command: redis-server --maxmemory 256mb --maxmemory-policy allkeys-lru
   # Container 3: Cheetahcoin v2.5.0 Core Daemon (Uses $$H and $$P so Docker Compose keeps the variables)
   chta_node:
     image: ubuntu:22.04
