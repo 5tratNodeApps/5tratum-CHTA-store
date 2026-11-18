@@ -96,7 +96,7 @@ services:
         fi
         /opt/chta/cheetahcoind -datadir=/root/.cheetahcoin -server=1 -rpcuser=5tratum_user -rpcpassword=5tratum_secure_pass -rpcallowip=0.0.0.0/0 -rpcport=4743 -listen=1 -printtoconsole -addnode=66.24.77.71:8537 -addnode=139.99.209.227:8537
 
-
+        
     # Container 4: Self-Contained Web Console (Live Sync Bar + User Wallet Setup)
   chta_admin_interface:
     image: node:18-alpine
