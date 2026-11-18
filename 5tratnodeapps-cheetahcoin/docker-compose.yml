@@ -95,8 +95,6 @@ services:
           rm /tmp/chta.tgz
         fi
         /opt/chta/cheetahcoind -datadir=/root/.cheetahcoin -server=1 -rpcuser=5tratum_user -rpcpassword=5tratum_secure_pass -rpcallowip=0.0.0.0/0 -rpcport=4743 -listen=1 -printtoconsole -addnode=66.24.77.71:8537 -addnode=139.99.209.227:8537
-
-        
     # Container 4: Self-Contained Web Console (Live Sync Bar + User Wallet Setup)
   chta_admin_interface:
     image: node:18-alpine
@@ -277,18 +275,8 @@ services:
               res.on("end", () => { try { const p = JSON.parse(b).pools.cheetahcoin; r({ hashrate: p.hashrateString || "0 H/s", blocks: (p.blocks.pending || 0) + (p.blocks.confirmed || 0), workers: Object.entries(p.workers || {}).map(([name, i]) => ({ name, hashrate: i.hashrateString || "0 H/s" })) }); } catch (e) { r(null); } });
             }).on("error", () => r(null)));
             const blocks = info ? (info.blocks || 0) : 0;
-            const headers = info ? (info.headers || 0) : 0;
-            const pct = headers > 0 ? Math.min(100, (blocks / headers) * 100) : 0;
-            const peers = net ? (net.connections || 0) : 0;
-            res.writeHead(200, { "Content-Type": "application/json" });
-            return res.end(JSON.stringify({ blocks, headers, pct, peers, pool }));
-          }
-          res.writeHead(200, { "Content-Type": "text/html" });
-          fs.createReadStream("/index.html").pipe(res);
-        }).listen(8080, "0.0.0.0");
-        EOF
-        node /server.js
-  # Container 5: NOMP Mining Portal & Stratum Proxy (Connects miners on port 3032)
+
+  # Container 4: NOMP Mining Portal & Stratum Proxy (Connects miners on port 3032)
   chta_pool:
     image: shorelinecrypto/nomp-neng:latest
     container_name: chta_pool
