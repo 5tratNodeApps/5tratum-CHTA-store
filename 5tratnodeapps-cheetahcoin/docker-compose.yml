@@ -358,7 +358,7 @@ services:
           ]
         }
         EOF
-        until curl -s --user 5tratum_user:5tratum_secure_pass --data-binary '{"jsonrpc":"1.0","id":"1","method":"getblockchaininfo","params":[]}' -H 'content-type: text/plain;' http://chta_node:4743/ | grep -q "blocks"; do
+        until curl -s --user 5tratum_user:5tratum_secure_pass --data-binary '{"jsonrpc":"1.0","id":"1","method":"getblockchaininfo","params":[]}' -H 'content-type: text/plain;' http://chta_node:4743/ | grep -q "verificationprogress"; do
         echo "Waiting for chta_node RPC on port 4743..."
         sleep 5
         done
