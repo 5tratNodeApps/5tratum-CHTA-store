@@ -3,117 +3,218 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Cheetahcoin Solo Miner Console</title>
+  <title>Cheetahcoin Solo Miner</title>
   <style>
-    body { background: #111; color: #fff; font-family: sans-serif; padding: 5%; text-align: center; margin: 0; }
-    .card { max-width: 600px; margin: 20px auto; background: #1e1e1e; padding: 25px; border-radius: 10px; border: 1px solid #ff9900; }
-    .subcard { max-width: 600px; margin: 20px auto; background: #1a1a1a; padding: 22px; border-radius: 10px; font-size: 14px; color: #ccc; text-align: left; }
-    h2 { color: #ff9900; margin-top: 0; text-align: center; }
-    .progress-wrap { background: #333; border-radius: 6px; height: 22px; overflow: hidden; margin: 15px 0 8px; }
-    .progress-bar { background: #ff9900; height: 100%; width: 0%; transition: width 0.5s ease; }
-    .pct-text { font-size: 20px; font-weight: bold; color: #ff9900; }
-    .block-info { font-size: 13px; color: #aaa; margin: 6px 0 14px; }
-    .notice-wait { background: #2d1f0a; border: 1px solid #ff9900; color: #ffcc80; padding: 10px 14px; border-radius: 6px; font-size: 13px; line-height: 1.4; }
-    .notice-ready { background: #0f2918; border: 1px solid #2ecc71; color: #a3e4d7; padding: 10px 14px; border-radius: 6px; font-size: 13px; line-height: 1.4; }
-    label { display: block; margin: 14px 0 6px; font-weight: bold; color: #fff; font-size: 13px; }
-    input { width: 100%; box-sizing: border-box; padding: 10px; border-radius: 6px; border: 1px solid #444; background: #111; color: #ff9900; font-family: monospace; font-size: 14px; }
-    input:focus { outline: none; border-color: #ff9900; }
-    .output-row { display: flex; align-items: center; justify-content: space-between; background: #262626; padding: 10px 12px; border-radius: 6px; margin-top: 6px; gap: 10px; }
-    code { color: #ff9900; font-size: 13px; word-break: break-all; }
-    button { background: #ff9900; color: #111; border: none; padding: 7px 12px; border-radius: 5px; font-weight: bold; cursor: pointer; white-space: nowrap; }
-    button:hover { background: #e68a00; }
-    .note { font-size: 12px; color: #888; margin-top: 15px; text-align: center; }
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #111315; color: #f1f3f5; padding: 20px; }
+    .container { max-width: 1180px; margin: 0 auto; }
+    .header { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 20px; }
+    .title-wrap { display: flex; align-items: center; gap: 12px; }
+    .title-wrap img { width: 42px; height: 42px; border-radius: 10px; }
+    h1 { margin: 0; font-size: 22px; color: #ff9900; }
+    .sub { font-size: 12px; color: #9aa0a6; }
+    .status-pill { padding: 6px 14px; border-radius: 20px; font-size: 12px; font-weight: 700; background: rgba(46, 204, 113, 0.16); color: #2ecc71; border: 1px solid rgba(46, 204, 113, 0.4); }
+    .status-pill.warn { background: rgba(255, 153, 0, 0.16); color: #ff9900; border: 1px solid rgba(255, 153, 0, 0.4); }
+    .grid { display: grid; grid-template-columns: 1fr; gap: 18px; }
+    @media (min-width: 860px) { .grid { grid-template-columns: 1fr 1fr; } }
+    .card { background: #1a1d21; border: 1px solid #2b3036; border-radius: 12px; padding: 18px; }
+    .card h2 { margin: 0 0 12px; font-size: 15px; color: #e8eaed; display: flex; align-items: center; gap: 8px; }
+    .bar-bg { width: 100%; height: 12px; background: #262a30; border-radius: 8px; overflow: hidden; margin-bottom: 10px; }
+    .bar-fill { height: 100%; width: 0%; background: linear-gradient(90deg, #2ecc71, #ff9900); transition: width 0.5s ease; }
+    .meta { display: flex; justify-content: space-between; font-size: 12px; color: #9aa0a6; }
+    .stats-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 14px; }
+    .stat-box { background: #141619; border: 1px solid #262a30; border-radius: 8px; padding: 10px; text-align: center; }
+    .stat-val { font-size: 17px; font-weight: 700; color: #ff9900; }
+    .stat-lbl { font-size: 11px; color: #9aa0a6; margin-top: 2px; }
+    .field { margin-bottom: 10px; }
+    .field label { display: block; font-size: 11px; color: #9aa0a6; margin-bottom: 4px; }
+    .copy-row { display: flex; gap: 8px; }
+    .copy-row input { flex: 1; background: #141619; border: 1px solid #2b3036; color: #fff; padding: 8px 10px; border-radius: 6px; font-size: 13px; }
+    .btn { background: #2b3036; color: #fff; border: none; padding: 8px 12px; border-radius: 6px; font-size: 12px; font-weight: 600; cursor: pointer; }
+    .btn:hover { background: #3a4048; }
+    table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    th, td { text-align: left; padding: 8px 6px; border-bottom: 1px solid #262a30; }
+    th { color: #9aa0a6; font-size: 11px; text-transform: uppercase; }
+    .event-banner { width: 100%; border-radius: 8px; margin-top: 12px; border: 1px solid #2b3036; display: none; }
+    .sync-wrap { display: none; overflow: hidden; border-radius: 8px; margin-top: 12px; border: 1px solid rgba(46, 204, 113, 0.45); animation: neonPulse 2.4s ease-in-out infinite; }
+    .sync-wrap img { width: 100%; display: block; animation: cheetahSprint 1.4s ease-in-out infinite; }
+    @keyframes cheetahSprint {
+      0%, 100% { transform: translateX(-4px) translateY(0px) scale(1.03); }
+      50% { transform: translateX(6px) translateY(-3px) scale(1.04); }
+    }
+    @keyframes neonPulse {
+      0%, 100% { box-shadow: 0 0 8px rgba(46, 204, 113, 0.25); }
+      50% { box-shadow: 0 0 18px rgba(255, 153, 0, 0.5); }
+    }
+    .payout-badge { display: none; align-items: center; gap: 6px; background: rgba(46, 204, 113, 0.14); border: 1px solid rgba(46, 204, 113, 0.35); color: #2ecc71; padding: 3px 9px; border-radius: 20px; font-size: 11px; font-weight: 700; margin-left: auto; }
+    .payout-badge img { width: 16px; height: 16px; border-radius: 50%; }
+    .block-modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.84); z-index: 999; align-items: center; justify-content: center; padding: 20px; }
+    .block-modal.show { display: flex; }
+    .block-box { background: #1a1d21; border: 2px solid #ff9900; border-radius: 12px; max-width: 440px; width: 100%; padding: 18px; text-align: center; box-shadow: 0 0 28px rgba(255,153,0,0.45); }
+    .block-box img { width: 100%; border-radius: 8px; margin-bottom: 12px; }
+    .block-box h3 { color: #ff9900; margin: 0 0 6px; font-size: 19px; }
+    .block-box p { color: #ccc; font-size: 13px; margin: 0 0 14px; }
+    .dismiss-btn { background: #ff9900; color: #111; border: none; padding: 10px 22px; border-radius: 6px; font-weight: 700; cursor: pointer; font-size: 14px; }
   </style>
 </head>
 <body>
-  <div class="card">
-    <h2>Cheetahcoin Solo Miner Console</h2>
-    <div id="syncStatus"><strong>Node Status:</strong> Checking blockchain sync...</div>
-    <div class="progress-wrap"><div class="progress-bar" id="progressBar"></div></div>
-    <div class="pct-text" id="pctText">0.00%</div>
-    <div class="block-info" id="blockInfo">Blocks: -- / -- &nbsp;|&nbsp; Peers: --</div>
-    <div class="notice-wait" id="connectNotice">
-      <strong>Notice:</strong> Please wait until the blockchain sync reaches <strong>100%</strong> before connecting your mining devices. Stratum port 3032 opens automatically once synced.
+  <div class="block-modal" id="blockModal">
+    <div class="block-box">
+      <img src="https://githubusercontent.com" alt="Block Found">
+      <h3>CHEETAH CAUGHT! BLOCK FOUND!</h3>
+      <p>Your solo miner found a Cheetahcoin block! Rewards pay out automatically after 100 confirmations.</p>
+      <button class="dismiss-btn" onclick="dismissBlockBanner()">Awesome — Dismiss</button>
     </div>
   </div>
 
-  <div class="subcard">
-    <label for="wallet">Your CHTA Payout Wallet Address:</label>
-    <input type="text" id="wallet" placeholder="Paste your Cheetahcoin (CHTA) address here..." oninput="updateConfig()">
-
-    <label for="worker">Worker Name (Optional):</label>
-    <input type="text" id="worker" value="worker1" oninput="updateConfig()">
-
-    <label>Stratum Pool URL (Auto-Detected):</label>
-    <div class="output-row">
-      <code id="stratumUrl">stratum+tcp://192.168.1.100:3032</code>
-      <button onclick="copyText('stratumUrl', this)">Copy</button>
+  <div class="container">
+    <div class="header">
+      <div class="title-wrap">
+        <img src="https://githubusercontent.com" alt="CHTA">
+        <div>
+          <h1>Cheetahcoin Solo Miner</h1>
+          <div class="sub">Local Full Node &amp; Stratum Proxy Console</div>
+        </div>
+      </div>
+      <div class="status-pill warn" id="syncStatus">Connecting to Node...</div>
     </div>
 
-    <label>Miner Worker Username:</label>
-    <div class="output-row">
-      <code id="workerOutput">YOUR_CHTA_ADDRESS.worker1</code>
-      <button onclick="copyText('workerOutput', this)">Copy</button>
-    </div>
+    <div class="grid">
+      <div>
+        <div class="card" style="margin-bottom: 18px;">
+          <h2>Blockchain Sync &amp; Main-Chain Health</h2>
+          <div class="bar-bg"><div class="bar-fill" id="syncBar"></div></div>
+          <div class="meta">
+            <span id="blockHeight">Blocks: 0 / 0</span>
+            <span id="peerCount">Peers: 0</span>
+            <span id="syncPct">0.0%</span>
+          </div>
+          <div class="sync-wrap" id="syncBanner">
+            <img src="https://githubusercontent.com" alt="Syncing the Savanna">
+          </div>
+        </div>
 
-    <label>Miner Password:</label>
-    <div class="output-row">
-      <code id="passOutput">x</code>
-      <button onclick="copyText('passOutput', this)">Copy</button>
-    </div>
+        <div class="card">
+          <h2>Stratum Connection Setup</h2>
+          <div class="field">
+            <label>Stratum URL (Port 3032)</label>
+            <div class="copy-row">
+              <input type="text" id="stratumUrl" readonly>
+              <button class="btn" onclick="copyField('stratumUrl')">Copy</button>
+            </div>
+          </div>
+          <div class="field">
+            <label>Worker Username Format (Replace with your CHTA wallet)</label>
+            <div class="copy-row">
+              <input type="text" id="workerFormat" value="YOUR_CHTA_WALLET_ADDRESS.Worker1" readonly>
+              <button class="btn" onclick="copyField('workerFormat')">Copy</button>
+            </div>
+          </div>
+          <div class="field" style="margin-bottom: 0;">
+            <label>Password</label>
+            <div class="copy-row">
+              <input type="text" id="stratumPass" value="x" readonly>
+              <button class="btn" onclick="copyField('stratumPass')">Copy</button>
+            </div>
+          </div>
+        </div>
+      </div>
 
-    <p class="note">Your wallet address is saved locally in your browser. A 1% pool developer fee supports ongoing app maintenance.</p>
+      <div class="card">
+        <h2>
+          Connected Devices &amp; Stats
+          <span class="payout-badge" id="payoutBadge"><img src="https://githubusercontent.com" alt="CHTA">Payout Confirmed</span>
+        </h2>
+        <div class="stats-row">
+          <div class="stat-box">
+            <div class="stat-val" id="poolHashrate">0 H/s</div>
+            <div class="stat-lbl">Total Hashrate</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-val" id="activeWorkers">0</div>
+            <div class="stat-lbl">Active Workers</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-val" id="blocksFound">0</div>
+            <div class="stat-lbl">Blocks Found</div>
+          </div>
+        </div>
+        <table>
+          <thead>
+            <tr><th>Worker ID</th><th>Hashrate</th><th>Status</th></tr>
+          </thead>
+          <tbody id="workerRows">
+            <tr><td colspan="3" style="color:#9aa0a6;text-align:center;">Waiting for miners to connect...</td></tr>
+          </tbody>
+        </table>
+        <img class="event-banner" id="readyBanner" src="https://githubusercontent.com" alt="Ready to Hunt">
+      </div>
+    </div>
   </div>
 
   <script>
-    const host = window.location.hostname;
-    const isLocal = host && !host.includes("github.io") && host !== "127.0.0.1" && host !== "localhost";
-    document.getElementById("stratumUrl").textContent = "stratum+tcp://" + (isLocal ? host : "YOUR_NODE_IP") + ":3032";
+    document.getElementById("stratumUrl").value = "stratum+tcp://" + window.location.hostname + ":3032";
 
-    const savedWallet = localStorage.getItem("chta_user_wallet");
-    const savedWorker = localStorage.getItem("chta_user_worker");
-    if (savedWallet) document.getElementById("wallet").value = savedWallet;
-    if (savedWorker) document.getElementById("worker").value = savedWorker;
-    updateConfig();
-
-    function updateConfig() {
-      const w = document.getElementById("wallet").value.trim();
-      const n = document.getElementById("worker").value.trim() || "worker1";
-      localStorage.setItem("chta_user_wallet", w);
-      localStorage.setItem("chta_user_worker", n);
-      document.getElementById("workerOutput").textContent = (w || "YOUR_CHTA_ADDRESS") + "." + n;
+    function copyField(id) {
+      const el = document.getElementById(id);
+      el.select();
+      navigator.clipboard.writeText(el.value);
     }
 
-    function copyText(id, btn) {
-      navigator.clipboard.writeText(document.getElementById(id).textContent);
-      const orig = btn.textContent;
-      btn.textContent = "Copied!";
-      setTimeout(() => btn.textContent = orig, 1500);
+    function dismissBlockBanner() {
+      localStorage.setItem("chta_seen_blocks", window.latestBlockCount || 0);
+      document.getElementById("blockModal").classList.remove("show");
     }
 
     async function fetchSync() {
       try {
         const res = await fetch("/status");
-        if (!res.ok) return;
         const data = await res.json();
-        const pct = parseFloat(data.pct) || 0;
-        document.getElementById("progressBar").style.width = pct + "%";
-        document.getElementById("pctText").textContent = pct.toFixed(2) + "%";
-        document.getElementById("blockInfo").textContent = "Blocks: " + data.blocks.toLocaleString() + " / " + data.headers.toLocaleString() + " | Peers: " + data.peers;
-        const notice = document.getElementById("connectNotice");
-        if (pct >= 99.9 && data.headers > 0) {
-          document.getElementById("syncStatus").innerHTML = "<strong>Node Status:</strong> Fully Synced &amp; Ready";
-          notice.className = "notice-ready";
-          notice.innerHTML = "<strong>Ready to Mine:</strong> Blockchain sync is at 100%. You can now connect your mining devices to port <strong>3032</strong>.";
+        const pct = data.pct || 0;
+        document.getElementById("syncBar").style.width = pct.toFixed(1) + "%";
+        document.getElementById("blockHeight").textContent = "Blocks: " + data.blocks.toLocaleString() + " / " + data.headers.toLocaleString();
+        document.getElementById("peerCount").textContent = "Peers: " + data.peers;
+        document.getElementById("syncPct").textContent = pct.toFixed(1) + "%";
+const isMainChainHealthy = (data.peers > 0) && (data.headers > 0) && (data.blocks >= data.headers - 2);
+const statusPill = document.getElementById("syncStatus");
+if (isMainChainHealthy) {
+statusPill.textContent = "Main Chain Synced — Ready to Mine";
+statusPill.classList.remove("warn");
+} else if (data.peers === 0) {
+statusPill.textContent = "Reconnecting to Main Chain Peers...";
+statusPill.classList.add("warn");
+} else {
+statusPill.textContent = "Syncing Main Chain (" + pct.toFixed(1) + "%)";
+statusPill.classList.add("warn");
+}
+document.getElementById("syncBanner").style.display = isMainChainHealthy ? "none" : "block";
+if (data.pool) {
+document.getElementById("poolHashrate").textContent = data.pool.hashrate;
+document.getElementById("activeWorkers").textContent = data.pool.workers.length;
+document.getElementById("blocksFound").textContent = data.pool.blocks;
+document.getElementById("readyBanner").style.display = (isMainChainHealthy && data.pool.workers.length === 0) ? "block" : "none";
+if (data.pool.confirmed > 0) {
+document.getElementById("payoutBadge").style.display = "inline-flex";
+}
+window.latestBlockCount = data.pool.blocks || 0;
+const seenBlocks = parseInt(localStorage.getItem("chta_seen_blocks") || "0", 10);
+if (window.latestBlockCount > seenBlocks) {
+document.getElementById("blockModal").classList.add("show");
+}
+const tbody = document.getElementById("workerRows");
+if (data.pool.workers.length > 0) {
+          tbody.innerHTML = data.pool.workers.map(w =>
+            "<tr><td>" + w.name + "</td><td>" + w.hashrate + "</td><td style='color:#2ecc71;'>Online</td></tr>"
+          ).join("");
         } else {
-          document.getElementById("syncStatus").innerHTML = "<strong>Node Status:</strong> Synchronizing Blockchain...";
-          notice.className = "notice-wait";
-        }
-      } catch (e) {}
-    }
-
-    fetchSync();
-    setInterval(fetchSync, 5000);
-  </script>
+          tbody.innerHTML = "<tr><td colspan='3' style='color:#9aa0a6;text-align:center;'>No active workers connected</td></tr>";
+}
+}
+} catch (e) {}
+}
+fetchSync();
+setInterval(fetchSync, 5000);
+      </script>
 </body>
 </html>
+
