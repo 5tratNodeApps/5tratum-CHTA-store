@@ -55,6 +55,17 @@
     .block-box h3 { color: #ff9900; margin: 0 0 6px; font-size: 19px; }
     .block-box p { color: #ccc; font-size: 13px; margin: 0 0 14px; }
     .dismiss-btn { background: #ff9900; color: #111; border: none; padding: 10px 22px; border-radius: 6px; font-weight: 700; cursor: pointer; font-size: 14px; }
+    .tabs { display: flex; gap: 8px; margin-bottom: 18px; border-bottom: 1px solid #2b3036; padding-bottom: 10px; }
+    .tab-btn { background: #1a1d21; color: #9aa0a6; border: 1px solid #2b3036; padding: 8px 16px; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; }
+    .tab-btn.active { background: #ff9900; color: #111; border-color: #ff9900; }
+    .tab-pane { display: none; }
+    .tab-pane.active { display: block; }
+    .net-pills { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+    .net-chip { background: #141619; border: 1px solid #262a30; padding: 5px 10px; border-radius: 6px; font-size: 11px; color: #ccc; font-family: monospace; }
+    select { flex: 1; background: #141619; border: 1px solid #2b3036; color: #fff; padding: 9px 10px; border-radius: 6px; font-size: 13px; width: 100%; }
+    .btn-primary { background: #ff9900; color: #111; }
+    canvas { width: 100%; height: 180px; background: #141619; border: 1px solid #262a30; border-radius: 8px; display: block; }
+    .feed-box { background: #141619; border: 1px solid #262a30; border-radius: 8px; padding: 10px; font-family: monospace; font-size: 12px; color: #a3e4d7; max-height: 180px; overflow-y: auto; line-height: 1.6; }
   </style>
 </head>
 <body>
@@ -78,6 +89,13 @@
       </div>
       <div class="status-pill warn" id="syncStatus">Connecting to Node...</div>
     </div>
+    <div class="tabs">
+      <button class="tab-btn active" onclick="switchTab('dash', this)">Dashboard</button>
+      <button class="tab-btn" onclick="switchTab('pool', this)">Pool &amp; Charts</button>
+      <button class="tab-btn" onclick="switchTab('settings', this)">Node Settings</button>
+    </div>
+
+    <div id="tab-dash" class="tab-pane active">
 
     <div class="grid">
       <div>
@@ -89,6 +107,12 @@
             <span id="peerCount">Peers: 0</span>
             <span id="syncPct">0.0%</span>
           </div>
+          <div class="net-pills">
+              <span class="net-chip" id="diffChip">Difficulty: --</span>
+              <span class="net-chip" id="hashChip">Tip: --</span>
+              <span class="net-chip" id="diskChip">Disk: -- MB</span>
+          </div>
+
           <div class="sync-wrap" id="syncBanner">
             <img src="https://raw.githubusercontent.com/5tratNodeApps/5tratum-CHTA-store/main/5tratnodeapps-cheetahcoin/syncing.png" alt="Syncing the Savanna">
           </div>
@@ -150,6 +174,51 @@
         <img class="event-banner" id="readyBanner" src="https://raw.githubusercontent.com/5tratNodeApps/5tratum-CHTA-store/main/5tratnodeapps-cheetahcoin/ready.png" alt="Ready to Hunt">
       </div>
     </div>
+   </div>
+
+    <div id="tab-pool" class="tab-pane">
+      <div class="grid">
+        <div class="card">
+          <h2>Live Pool Hashrate History</h2>
+          <canvas id="hashChart" width="520" height="180"></canvas>
+          <div class="meta" style="margin-top:8px;">
+            <span>Updates every 5 seconds</span>
+            <span id="chartPeak">Peak: 0 H/s</span>
+          </div>
+        </div>
+        <div class="card">
+          <h2>Live Chain &amp; Pool Activity Feed</h2>
+          <div class="feed-box" id="liveFeed">Initializing live telemetry stream...</div>
+        </div>
+      </div>
+    </div>
+
+    <div id="tab-settings" class="tab-pane">
+      <div class="card" style="max-width: 620px;">
+        <h2>Node Storage &amp; Stratum Preferences</h2>
+        <div class="field">
+          <label>Blockchain Disk Pruning Mode (Current usage: <strong id="settingsDisk" style="color:#ff9900;">-- MB</strong>)</label>
+          <select id="pruneSelect">
+            <option value="0">Full Archival Node (Keep entire blockchain)</option>
+            <option value="2048">Pruned Node — 2 GB Cap (Saves disk space)</option>
+            <option value="4096">Pruned Node — 4 GB Cap (Recommended for small SSDs)</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Starting Stratum Share Difficulty (VarDiff auto-adjusts after connect)</label>
+          <select id="diffSelect">
+            <option value="0.001">0.001 — Micro Miners (ESP32 / CYD / NMTV)</option>
+            <option value="0.05">0.05 — Medium CPU / GPU Miners</option>
+            <option value="1.0">1.0 — High-Speed Scrypt ASICs</option>
+          </select>
+        </div>
+        <div style="display:flex;align-items:center;gap:12px;margin-top:14px;">
+          <button class="btn btn-primary" onclick="saveSettings()">Save Settings</button>
+          <span id="saveMsg" style="font-size:12px;color:#2ecc71;"></span>
+        </div>
+        <p style="font-size:12px;color:#9aa0a6;margin-top:12px;margin-bottom:0;">Note: Restarting the app in 5tratumOS applies updated pruning or starting difficulty values to the daemon.</p>
+      </div>
+    </div>
   </div>
 
   <script>
@@ -165,6 +234,56 @@
       localStorage.setItem("chta_seen_blocks", window.latestBlockCount || 0);
       document.getElementById("blockModal").classList.remove("show");
     }
+    
+    const historyPts = [];
+    let settingsLoaded = false;
+
+ function switchTab(id, btn) {
+   document.querySelectorAll(".tab-pane").forEach(p => p.classList.remove("active"));
+   document.querySelectorAll(".tab-btn").forEach(b => b.classList.remove("active"));
+   document.getElementById("tab-" + id).classList.add("active");
+   btn.classList.add("active");
+   if (id === "pool") drawChart();
+ }
+
+ function parseHash(str) {
+   const m = (str || "").match(/([\d.]+)\s*([KMGTP]?H)/i);
+   if (!m) return 0;
+   const mult = { H: 1, KH: 1e3, MH: 1e6, GH: 1e9, TH: 1e12, PH: 1e15 };
+   return parseFloat(m) * (mult[m.toUpperCase()] || 1);
+ }
+
+ function drawChart() {
+   const c = document.getElementById("hashChart");
+   const ctx = c.getContext("2d");
+   ctx.clearRect(0, 0, c.width, c.height);
+   if (historyPts.length < 2) return;
+   const max = Math.max(...historyPts, 1);
+   ctx.strokeStyle = "#ff9900";
+   ctx.lineWidth = 2.5;
+   ctx.beginPath();
+   historyPts.forEach((v, idx) => {
+     const x = (idx / (historyPts.length - 1)) * (c.width - 20) + 10;
+     const y = c.height - 15 - (v / max) * (c.height - 30);
+     idx === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+   });
+   ctx.stroke();
+ }
+
+ function addFeed(msg) {
+   const box = document.getElementById("liveFeed");
+   const ts = new Date().toLocaleTimeString();
+   box.innerHTML = "[" + ts + "] " + msg + "<br>" + box.innerHTML.split("<br>").slice(0, 18).join("<br>");
+ }
+
+ async function saveSettings() {
+   const prune = parseInt(document.getElementById("pruneSelect").value, 10);
+   const diff = parseFloat(document.getElementById("diffSelect").value);
+   const res = await fetch("/settings", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ prune, diff }) });
+   const j = await res.json();
+   document.getElementById("saveMsg").textContent = j.ok ? "Saved! Restart app to apply." : "Save failed.";
+   setTimeout(() => document.getElementById("saveMsg").textContent = "", 4000);
+ }
 
     async function fetchSync() {
       try {
@@ -175,6 +294,17 @@
         document.getElementById("blockHeight").textContent = "Blocks: " + data.blocks.toLocaleString() + " / " + data.headers.toLocaleString();
         document.getElementById("peerCount").textContent = "Peers: " + data.peers;
         document.getElementById("syncPct").textContent = pct.toFixed(1) + "%";
+        document.getElementById("diffChip").textContent = "Difficulty: " + Number(data.difficulty || 0).toLocaleString(undefined, { maximumFractionDigits: 2 });
+        document.getElementById("hashChip").textContent = "Tip: " + (data.bestblockhash ? data.bestblockhash.slice(0, 14) + "..." : "--");
+        document.getElementById("diskChip").textContent = "Disk: " + (data.diskMB || 0).toLocaleString() + " MB";
+        document.getElementById("settingsDisk").textContent = (data.diskMB || 0).toLocaleString() + " MB";
+
+   if (data.settings && !settingsLoaded) {
+     document.getElementById("pruneSelect").value = String(data.settings.prune || 0);
+     document.getElementById("diffSelect").value = String(data.settings.diff || 0.001);
+     settingsLoaded = true;
+   }
+
 const isMainChainHealthy = (data.peers > 0) && (data.headers > 0) && (data.blocks >= data.headers - 2);
 const statusPill = document.getElementById("syncStatus");
 if (isMainChainHealthy) {
@@ -193,6 +323,11 @@ document.getElementById("poolHashrate").textContent = data.pool.hashrate;
 document.getElementById("activeWorkers").textContent = data.pool.workers.length;
 document.getElementById("blocksFound").textContent = data.pool.blocks;
 document.getElementById("readyBanner").style.display = (isMainChainHealthy && data.pool.workers.length === 0) ? "block" : "none";
+historyPts.push(parseHash(data.pool.hashrate));
+  if (historyPts.length > 40) historyPts.shift();
+     drawChart();
+     addFeed("Height #" + data.blocks + " | Pool: " + data.pool.hashrate + " | Workers: " + data.pool.workers.length);
+
 if (data.pool.confirmed > 0) {
 document.getElementById("payoutBadge").style.display = "inline-flex";
 }
