@@ -8,6 +8,8 @@ services:
     restart: unless-stopped
     ports:
       - "8080:8080"
+    volumes:
+      - chta_data:/data
     entrypoint: ["/bin/sh", "-c"]
     command:
       - |
@@ -60,8 +62,10 @@ services:
           tar -xzf /tmp/chta.tgz -C /opt/chta --strip-components=1
           rm /tmp/chta.tgz
         fi
-        /opt/chta/cheetahcoind -datadir=/root/.cheetahcoin -server=1 -rpcuser=5tratum_user -rpcpassword=5tratum_secure_pass -rpcallowip=0.0.0.0/0 -rpcport=4743 -listen=1 -printtoconsole -addnode=66.24.77.71:8537 -addnode=139.99.209.227:8537
-
+    PRUNE=$$(grep -o '"prune":[0-9]*' /root/.cheetahcoin/settings.json 2>/dev/null | cut -d: -f2)
+     PRUNE_ARG=""
+     if [ -n "$$PRUNE" ] && [ "$$PRUNE" -gt 0 ]; then PRUNE_ARG="-prune=$$PRUNE"; fi
+     /opt/chta/cheetahcoind -datadir=/root/.cheetahcoin -server=1 -rpcuser=5tratum_user -rpcpassword=5tratum_secure_pass -rpcallowip=0.0.0.0/0 -rpcport=4743 -listen=1 -printtoconsole -addnode=66.24.77.71:8537 -addnode=139.99.209.227:8537 $$PRUNE_ARG
   # Container 4: NOMP Mining Portal & Stratum Proxy
   chta_pool:
     image: shorelinecrypto/nomp-neng:latest
@@ -92,6 +96,8 @@ services:
           done
         fi
         POOL_ADDR=$$(cat /data/pool_address.txt)
+        START_DIFF=$$(grep -o '"diff":[0-9.]*' /data/settings.json 2>/dev/null | cut -d: -f2)
+        if [ -z "$$START_DIFF" ]; then START_DIFF="0.001"; fi
         cat << EOF > pool_configs/cheetahcoin.json
         {
           "enabled": true,
@@ -113,7 +119,7 @@ services:
           },
           "ports": {
             "3032": {
-              "diff": 0.001,
+              "diff": $$START_DIFF,
               "varDiff": {
                 "minDiff": 0.0005,
                 "maxDiff": 100,
