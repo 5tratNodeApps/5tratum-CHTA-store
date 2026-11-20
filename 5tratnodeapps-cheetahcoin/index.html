@@ -250,7 +250,7 @@
    const m = (str || "").match(/([\d.]+)\s*([KMGTP]?H)/i);
    if (!m) return 0;
    const mult = { H: 1, KH: 1e3, MH: 1e6, GH: 1e9, TH: 1e12, PH: 1e15 };
-   return parseFloat(m) * (mult[m.toUpperCase()] || 1);
+   return parseFloat(m[1]) * (mult[m[2].toUpperCase()] || 1);
  }
 
  function drawChart() {
