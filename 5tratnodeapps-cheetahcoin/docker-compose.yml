@@ -53,20 +53,20 @@ services:
     entrypoint: ["/bin/bash", "-c"]
     command:
       - |
-        apt-get update && apt-get install -y wget tar ca-certificates
-        mkdir -p /opt/chta /root/.cheetahcoin
-        if [ ! -f /opt/chta/cheetahcoind ]; then
+          mkdir -p /root/.cheetahcoin/bin
+        if [ ! -f /root/.cheetahcoin/bin/cheetahcoind ]; then
+          apt-get -o Acquire::http::Timeout=15 update && apt-get install -y wget tar ca-certificates
           H=github.com
           P=/ShorelineCrypto/cheetahcoin/releases/download/v2.5.0/cheetahcoin_2.5.0_x86_64_linux-gnu.tgz
           wget -O /tmp/chta.tgz https://$$H$$P
-          tar -xzf /tmp/chta.tgz -C /opt/chta --strip-components=1
+          tar -xzf /tmp/chta.tgz -C /root/.cheetahcoin/bin --strip-components=1
           rm /tmp/chta.tgz
         fi
         PRUNE=$$(grep -o '"prune":[0-9]*' /root/.cheetahcoin/settings.json 2>/dev/null | cut -d: -f2)
         PRUNE_ARG=""
         if [ -n "$$PRUNE" ] && [ "$$PRUNE" -gt 0 ]; then PRUNE_ARG="-prune=$$PRUNE"; fi
-        /opt/chta/cheetahcoind -datadir=/root/.cheetahcoin -server=1 -rpcuser=5tratum_user -rpcpassword=5tratum_secure_pass -rpcallowip=0.0.0.0/0 -rpcport=4743 -listen=1 -printtoconsole -addnode=66.24.77.71:8537 -addnode=139.99.209.227:8537 $$PRUNE_ARG
-  # Container 4: NOMP Mining Portal & Stratum Proxy
+        /root/.cheetahcoin/bin/cheetahcoind -datadir=/root/.cheetahcoin -server=1 -rpcuser=5tratum_user -rpcpassword=5tratum_secure_pass -rpcallowip=0.0.0.0/0 -rpcport=4743 -listen=1 -printtoconsole -addnode=66.24.77.71:8537 -addnode=139.99.209.227:8537 $$PRUNE_ARG
+# Container 4: NOMP Mining Portal & Stratum Proxy
   chta_pool:
     image: shorelinecrypto/nomp-neng:latest
     container_name: chta_pool
