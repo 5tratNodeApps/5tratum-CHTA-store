@@ -53,7 +53,7 @@ services:
     entrypoint: ["/bin/bash", "-c"]
     command:
       - |
-          mkdir -p /root/.cheetahcoin/bin
+        mkdir -p /root/.cheetahcoin/bin
         if [ ! -f /root/.cheetahcoin/bin/cheetahcoind ]; then
           apt-get -o Acquire::http::Timeout=15 update && apt-get install -y wget tar ca-certificates
           H=github.com
