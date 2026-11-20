@@ -50,9 +50,8 @@ services:
           fs.createReadStream("/index.html").pipe(res);
         }).listen(8080, "0.0.0.0");
         EOF
+        node /server.js
 
-        
-        
   # Container 2: Redis Database
   redis:
     image: redis:alpine
