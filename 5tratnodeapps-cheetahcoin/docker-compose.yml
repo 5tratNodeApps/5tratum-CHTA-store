@@ -15,7 +15,9 @@ services:
       - |
         wget -qO /index.html "https://raw.githubusercontent.com/5tratNodeApps/5tratum-CHTA-store/main/5tratnodeapps-cheetahcoin/index.html"
         cat << 'EOF' > /server.js
-        const http = require("http"), fs = require("fs");
+        const http = require("http"), fs = require("fs"), { execSync } = require("child_process");
+        const cfgFile = "/data/settings.json";
+        const loadCfg = () => { try { return JSON.parse(fs.readFileSync(cfgFile, "utf8")); } catch (e) { return { prune: 0, diff: 0.001 }; } };
         const get = (opts, body) => new Promise(r => {
           const req = http.request(opts, res => { let d=""; res.on("data",c=>d+=c); res.on("end",()=>{ try{r(JSON.parse(d))}catch(e){r(null)} }); });
           req.on("error", ()=>r(null)); if(body) req.write(body); req.end();
@@ -25,17 +27,32 @@ services:
             const rpc = m => get({hostname:"chta_node",port:4743,method:"POST",auth:"5tratum_user:5tratum_secure_pass"}, JSON.stringify({jsonrpc:"1.0",id:1,method:m,params:[]}));
             const [i, n, s] = await Promise.all([rpc("getblockchaininfo"), rpc("getnetworkinfo"), get({hostname:"chta_pool",port:80,path:"/api/stats"})]);
             const blocks = i?.result?.blocks || 0, headers = i?.result?.headers || 0, peers = n?.result?.connections || 0;
+            const difficulty = i?.result?.difficulty || 0, bestblockhash = i?.result?.bestblockhash || "";
+            let diskMB = 0; try { diskMB = parseInt(execSync("du -sm /data 2>/dev/null").toString().split("\t")[0], 10) || 0; } catch (e) {}
             const p = s?.pools?.cheetahcoin || {}, w = p.workers || {};
             const workers = Object.keys(w).map(k => ({ name: k.split(".").pop() || k, hashrate: w[k].hashrateString || "0 H/s" }));
             res.writeHead(200, {"Content-Type":"application/json"});
-            return res.end(JSON.stringify({ blocks, headers, pct: headers > 0 ? Math.min(100, blocks/headers*100) : 0, peers, pool: { hashrate: p.hashrateString || "0 H/s", blocks: (p.blocks?.pending||0)+(p.blocks?.confirmed||0), confirmed: p.blocks?.confirmed||0, workers } }));
+            return res.end(JSON.stringify({ blocks, headers, pct: headers > 0 ? Math.min(100, blocks/headers*100) : 0, peers, difficulty, bestblockhash, diskMB, settings: loadCfg(), pool: { hashrate: p.hashrateString || "0 H/s", blocks: (p.blocks?.pending||0)+(p.blocks?.confirmed||0), confirmed: p.blocks?.confirmed||0, workers } }));
+          }
+          if (req.url === "/settings" && req.method === "POST") {
+            let b = ""; req.on("data", c => b += c);
+            return req.on("end", () => {
+              try {
+                const cur = loadCfg(), next = JSON.parse(b);
+                const updated = { prune: Math.max(0, parseInt(next.prune ?? cur.prune, 10) || 0), diff: Math.max(0.0005, parseFloat(next.diff ?? cur.diff) || 0.001) };
+                fs.writeFileSync(cfgFile, JSON.stringify(updated));
+                res.writeHead(200, {"Content-Type":"application/json"});
+                res.end(JSON.stringify({ ok: true, settings: updated }));
+              } catch (e) { res.writeHead(400); res.end('{"ok":false}'); }
+            });
           }
           res.writeHead(200, {"Content-Type":"text/html"});
           fs.createReadStream("/index.html").pipe(res);
         }).listen(8080, "0.0.0.0");
         EOF
-        node /server.js
 
+        
+        
   # Container 2: Redis Database
   redis:
     image: redis:alpine
