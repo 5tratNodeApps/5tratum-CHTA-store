@@ -64,6 +64,8 @@ services:
     image: ubuntu:22.04
     container_name: chta_node
     restart: unless-stopped
+    ports:
+      - "8537:8537"
     volumes:
       - chta_data:/root/.cheetahcoin
     entrypoint: ["/bin/bash", "-c"]
