@@ -32,7 +32,7 @@ services:
             const p = s?.pools?.cheetahcoin || {}, w = p.workers || {};
             const workers = Object.keys(w).map(k => ({ name: k.split(".").pop() || k, hashrate: w[k].hashrateString || "0 H/s" }));
             res.writeHead(200, {"Content-Type":"application/json"});
-            return res.end(JSON.stringify({ blocks, headers, pct: headers > 0 ? Math.min(100, blocks/headers*100) : 0, peers, difficulty, bestblockhash, diskMB, settings: loadCfg(), pool: { hashrate: p.hashrateString || "0 H/s", blocks: (p.blocks?.pending||0)+(p.blocks?.confirmed||0), confirmed: p.blocks?.confirmed||0, orphaned: p.blocks?.orphaned.||0, workers } }));
+            return res.end(JSON.stringify({ blocks, headers, pct: headers > 0 ? Math.min(100, blocks/headers*100) : 0, peers, difficulty, bestblockhash, diskMB, settings: loadCfg(), pool: { hashrate: p.hashrateString || "0 H/s", blocks: (p.blocks?.pending||0)+(p.blocks?.confirmed||0), confirmed: p.blocks?.confirmed||0, orphaned: p.blocks?.orphaned||0, workers } }));
           }
           if (req.url === "/settings" && req.method === "POST") {
             let b = ""; req.on("data", c => b += c);
