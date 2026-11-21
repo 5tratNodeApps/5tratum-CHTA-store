@@ -81,7 +81,7 @@ services:
         PRUNE=$$(grep -o '"prune":[0-9]*' /root/.cheetahcoin/settings.json 2>/dev/null | cut -d: -f2)
         PRUNE_ARG=""
         if [ -n "$$PRUNE" ] && [ "$$PRUNE" -gt 0 ]; then PRUNE_ARG="-prune=$$PRUNE"; fi
-        /root/.cheetahcoin/bin/cheetahcoind -datadir=/root/.cheetahcoin -server=1 -rpcuser=5tratum_user -rpcpassword=5tratum_secure_pass -rpcallowip=0.0.0.0/0 -rpcport=4743 -listen=1 -printtoconsole -addnode=66.24.77.71:8537 -addnode=139.99.209.227:8537 $$PRUNE_ARG
+        /root/.cheetahcoin/bin/cheetahcoind -datadir=/root/.cheetahcoin -server=1 -rpcuser=5tratum_user -rpcpassword=5tratum_secure_pass -rpcallowip=0.0.0.0/0 -rpcport=4743 -listen=1 -printtoconsole -addnode=66.24.77.71:8537 -addnode=139.99.209.227:8537 $$PRUNE_ARG -maxconnections=64
 # Container 4: NOMP Mining Portal & Stratum Proxy
   chta_pool:
     image: shorelinecrypto/nomp-neng:latest
