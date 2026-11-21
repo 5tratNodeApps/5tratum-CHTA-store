@@ -295,7 +295,7 @@
         document.getElementById("blockHeight").textContent = "Blocks: " + data.blocks.toLocaleString() + " / " + data.headers.toLocaleString();
         document.getElementById("peerCount").textContent = "Peers: " + data.peers;
         document.getElementById("syncPct").textContent = pct.toFixed(1) + "%";
-        document.getElementById("diffChip").textContent = "Difficulty: " + Number(data.difficulty || 0).toLocaleString(undefined, { maximumFractionDigits: 2 });
+        document.getElementById("diffChip").textContent = "Difficulty: " + Number(data.difficulty || 0).toLocaleString(undefined, { maximumFractionDigits: 6 });
         document.getElementById("hashChip").textContent = "Tip: " + (data.bestblockhash ? data.bestblockhash.slice(0, 14) + "..." : "--");
         document.getElementById("diskChip").textContent = "Disk: " + (data.diskMB || 0).toLocaleString() + " MB";
         document.getElementById("settingsDisk").textContent = (data.diskMB || 0).toLocaleString() + " MB";
