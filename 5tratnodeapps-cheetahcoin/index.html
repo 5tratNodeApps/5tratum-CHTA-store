@@ -322,7 +322,8 @@ document.getElementById("syncBanner").style.display = isMainChainHealthy ? "none
 if (data.pool) {
 document.getElementById("poolHashrate").textContent = data.pool.hashrate;
 document.getElementById("activeWorkers").textContent = data.pool.workers.length;
-document.getElementById("blocksFound").textContent = data.pool.blocks;
+const orph = data.pool.orphaned || 0;
+document.getElementById("blocksFound").textContent = orph > 0 ? (data.pool.blocks + " (" + orph + " Orph)") : data.pool.blocks;
 document.getElementById("readyBanner").style.display = (isMainChainHealthy && data.pool.workers.length === 0) ? "block" : "none";
 historyPts.push(parseHash(data.pool.hashrate));
   if (historyPts.length > 40) historyPts.shift();
