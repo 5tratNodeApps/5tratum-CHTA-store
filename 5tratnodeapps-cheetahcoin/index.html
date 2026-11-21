@@ -259,6 +259,7 @@
    ctx.clearRect(0, 0, c.width, c.height);
    if (historyPts.length < 2) return;
    const max = Math.max(...historyPts, 1);
+   document.getElementById("chartPeak").textContent = "Peak: " + (max >= 1e6 ? (max / 1e6).toFixed(2) + " MH/s" : max >= 1e3 ? (max / 1e3).toFixed(2) + " KH/s" : max.toFixed(0) + " H/s");
    ctx.strokeStyle = "#ff9900";
    ctx.lineWidth = 2.5;
    ctx.beginPath();
